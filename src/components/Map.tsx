@@ -4,8 +4,9 @@ import { KINGSTON_CENTER } from '@/types';
 import {
   initializeMapbox,
   createMap,
-  addMarker,
+  addServiceMarkers,
   flyToLocation,
+  enable3DBuildings,
 } from '@/services/mapService';
 import type * as mapboxgl from 'mapbox-gl';
 
@@ -16,7 +17,6 @@ export const Map = ({
 }: MapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const markers = useRef<mapboxgl.Marker[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,6 +30,10 @@ export const Map = ({
 
       map.current.on('load', () => {
         setIsLoading(false);
+        // Enable 3D buildings after map loads
+        if (map.current) {
+          enable3DBuildings(map.current);
+        }
       });
 
       map.current.on('error', (e) => {
@@ -40,7 +44,6 @@ export const Map = ({
 
       // Cleanup
       return () => {
-        markers.current.forEach(marker => marker.remove());
         map.current?.remove();
       };
     } catch (err) {
@@ -49,19 +52,57 @@ export const Map = ({
     }
   }, []);
 
-  // Update markers when services change
+  // Update service markers when services change
   useEffect(() => {
     if (!map.current || isLoading) return;
 
-    // Remove existing markers
-    markers.current.forEach(marker => marker.remove());
-    markers.current = [];
+    // Update the GeoJSON source with new service data
+    addServiceMarkers(map.current, services);
+  }, [services, isLoading]);
 
-    // Add new markers for filtered services
-    services.forEach(service => {
-      const marker = addMarker(map.current!, service, onServiceSelect);
-      markers.current.push(marker);
-    });
+  // Add click handlers for service markers
+  useEffect(() => {
+    if (!map.current || isLoading) return;
+
+    const handleClick = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
+      if (!e.features || e.features.length === 0) return;
+
+      const feature = e.features[0];
+      const serviceId = feature.properties?.id;
+
+      // Find the service by ID
+      const service = services.find(s => s.id === serviceId);
+      if (service) {
+        onServiceSelect(service);
+      }
+    };
+
+    const handleMouseEnter = () => {
+      if (map.current) {
+        map.current.getCanvas().style.cursor = 'pointer';
+      }
+    };
+
+    const handleMouseLeave = () => {
+      if (map.current) {
+        map.current.getCanvas().style.cursor = '';
+      }
+    };
+
+    // Wait for layer to exist before adding handlers
+    if (map.current.getLayer('service-circles')) {
+      map.current.on('click', 'service-circles', handleClick);
+      map.current.on('mouseenter', 'service-circles', handleMouseEnter);
+      map.current.on('mouseleave', 'service-circles', handleMouseLeave);
+    }
+
+    return () => {
+      if (map.current) {
+        map.current.off('click', 'service-circles', handleClick);
+        map.current.off('mouseenter', 'service-circles', handleMouseEnter);
+        map.current.off('mouseleave', 'service-circles', handleMouseLeave);
+      }
+    };
   }, [services, isLoading, onServiceSelect]);
 
   // Fly to selected service

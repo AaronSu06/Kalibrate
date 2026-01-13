@@ -67,12 +67,5 @@ body {
   border-width: 0;
 }
 
-/* Service markers */
-.service-marker {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s;
-}
-
-.service-marker:hover {
-  transform: scale(1.1);
-}
+/* Service markers are now native Mapbox layers (circles + labels) */
+/* No custom marker styles needed - all rendering handled by Mapbox */
