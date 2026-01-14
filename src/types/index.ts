@@ -36,12 +36,16 @@ export interface MapViewState {
   longitude: number;
   latitude: number;
   zoom: number;
+  pitch: number;
+  bearing: number;
 }
 
 export const KINGSTON_CENTER: MapViewState = {
-  latitude: 44.2312,
-  longitude: -76.4860,
-  zoom: 13,
+  latitude: 44.231416,
+  longitude: -76.483071,
+  zoom: 15.39,
+  pitch: 69,
+  bearing: 0,
 };
 
 // Chatbot types
