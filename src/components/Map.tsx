@@ -28,12 +28,14 @@ export const Map = ({
       initializeMapbox();
       map.current = createMap(mapContainer.current, KINGSTON_CENTER);
 
-      map.current.on('load', () => {
-        setIsLoading(false);
-        // Enable 3D buildings after map loads
+      map.current.on('style.load', () => {
         if (map.current) {
           enable3DBuildings(map.current);
         }
+      });
+
+      map.current.on('load', () => {
+        setIsLoading(false);
       });
 
       map.current.on('error', (e) => {
@@ -57,8 +59,8 @@ export const Map = ({
     if (!map.current || isLoading) return;
 
     // Update the GeoJSON source with new service data
-    addServiceMarkers(map.current, services);
-  }, [services, isLoading]);
+    addServiceMarkers(map.current);
+  }, [isLoading]);
 
   // Add click handlers for service markers
   useEffect(() => {
