@@ -99,67 +99,7 @@ export const addServiceMarkers = (
     data: geojson,
   });
 
-  // Outermost glow layer - large soft glow
-  map.addLayer({
-    id: 'service-circles-glow-outer2',
-    type: 'circle',
-    source: 'services',
-    paint: {
-      'circle-radius': [
-        'interpolate',
-        ['linear'],
-        ['zoom'],
-        10, 30,
-        15, 50,
-        18, 70,
-      ],
-      'circle-color': ['get', 'color'],
-      'circle-opacity': 0.4,
-      'circle-blur': 1,
-    },
-  });
-
-  // Outer glow layer
-  map.addLayer({
-    id: 'service-circles-glow-outer',
-    type: 'circle',
-    source: 'services',
-    paint: {
-      'circle-radius': [
-        'interpolate',
-        ['linear'],
-        ['zoom'],
-        10, 20,
-        15, 35,
-        18, 50,
-      ],
-      'circle-color': ['get', 'color'],
-      'circle-opacity': 0.6,
-      'circle-blur': 0.7,
-    },
-  });
-
-  // Inner glow layer - bright
-  map.addLayer({
-    id: 'service-circles-glow',
-    type: 'circle',
-    source: 'services',
-    paint: {
-      'circle-radius': [
-        'interpolate',
-        ['linear'],
-        ['zoom'],
-        10, 12,
-        15, 20,
-        18, 30,
-      ],
-      'circle-color': ['get', 'color'],
-      'circle-opacity': 0.8,
-      'circle-blur': 0.4,
-    },
-  });
-
-  // Add main circle markers layer (bright core with white center)
+  // Add main circle markers layer (minimal dots that scale with zoom)
   map.addLayer({
     id: 'service-circles',
     type: 'circle',
@@ -169,21 +109,14 @@ export const addServiceMarkers = (
         'interpolate',
         ['linear'],
         ['zoom'],
-        10, 6,
-        15, 10,
-        18, 14,
+        9, 3,
+        12, 4,
+        15, 5.5,
+        18, 7.5,
       ],
-      'circle-color': '#ffffff',
-      'circle-stroke-width': [
-        'interpolate',
-        ['linear'],
-        ['zoom'],
-        10, 3,
-        15, 5,
-        18, 7,
-      ],
-      'circle-stroke-color': ['get', 'color'],
-      'circle-opacity': 1,
+      'circle-color': ['get', 'color'],
+      'circle-opacity': 0.95,
+      'circle-blur': 0,
     },
   });
 

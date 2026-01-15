@@ -36,10 +36,10 @@ export const CategoryList = ({
               transition-all duration-150 border-l-2
               ${
                 isSelected
-                  ? 'bg-neutral-900 border-neutral-400 text-white'
-                  : 'bg-transparent border-transparent text-neutral-400 hover:bg-neutral-900 hover:text-neutral-300'
+                  ? 'bg-transparent border-white/40 text-white'
+                  : 'bg-transparent border-transparent text-white/55 hover:text-white/80'
               }
-              focus:outline-none focus:ring-1 focus:ring-neutral-700
+              focus:outline-none focus:ring-1 focus:ring-white/40
             `}
             aria-pressed={isSelected}
             aria-label={`${info.label}, ${count} locations ${isSelected ? 'selected' : ''}`}
@@ -47,7 +47,7 @@ export const CategoryList = ({
             <div className={`text-xs ${isSelected ? 'font-medium' : 'font-normal'}`}>
               {info.label}
             </div>
-            <div className={`text-[10px] ${isSelected ? 'text-neutral-500' : 'text-neutral-600'}`}>
+            <div className={`text-[10px] ${isSelected ? 'text-white/70' : 'text-white/45'}`}>
               {count}
             </div>
           </button>

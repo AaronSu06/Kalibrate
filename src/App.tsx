@@ -87,6 +87,7 @@ function App() {
         isOpen={isChatbotOpen}
         onClose={() => setIsChatbotOpen(false)}
         services={filteredServices}
+        sidebarWidth={sidebarWidth}
       />
     </div>
   );

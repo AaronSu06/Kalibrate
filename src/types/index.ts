@@ -99,6 +99,7 @@ export interface ChatbotModalProps {
   isOpen: boolean;
   onClose: () => void;
   services: ServiceLocation[];
+  sidebarWidth: number;
 }
 
 export interface CategoryListProps {
