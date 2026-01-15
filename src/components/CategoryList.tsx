@@ -10,6 +10,7 @@ const CATEGORY_INFO: Record<
   pharmacy: { label: 'Pharmacies', icon: '💊', color: 'bg-purple-500' },
   transportation: { label: 'Transportation', icon: '🚌', color: 'bg-amber-500' },
   community: { label: 'Community', icon: '🏛️', color: 'bg-cyan-500' },
+  recreation: { label: 'Recreation', icon: '🏞️', color: 'bg-pink-500' },
 };
 
 export const CategoryList = ({
