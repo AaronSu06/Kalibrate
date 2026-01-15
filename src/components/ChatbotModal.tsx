@@ -128,7 +128,7 @@ export const ChatbotModal = ({
                 Voice Assistant
               </h2>
               <p className="text-xs text-gray-500">
-                Powered by AWS Lex (stubbed)
+                Powered by AWS Lex + Transcribe
               </p>
             </div>
           </div>

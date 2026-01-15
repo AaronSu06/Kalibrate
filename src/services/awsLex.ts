@@ -1,9 +1,13 @@
+import {
+  LexRuntimeV2Client,
+  RecognizeTextCommand,
+} from '@aws-sdk/client-lex-runtime-v2';
 import type { ChatMessage } from '@/types';
-
-/**
- * AWS Lex V2 Service - STUBBED FOR MVP
- * Phase 2 will implement real chatbot integration
- */
+import {
+  getAwsCredentials,
+  getAwsRegion,
+  getLexLocaleId,
+} from '@/services/awsConfig';
 
 export interface LexResponse {
   message: string;
@@ -11,57 +15,81 @@ export interface LexResponse {
   slots?: Record<string, string>;
 }
 
+const getLexClient = (() => {
+  let client: LexRuntimeV2Client | null = null;
+  return () => {
+    if (!client) {
+      client = new LexRuntimeV2Client({
+        region: getAwsRegion(),
+        credentials: getAwsCredentials(),
+      });
+    }
+    return client;
+  };
+})();
+
+const getSessionId = (() => {
+  let sessionId: string | null = null;
+  return () => {
+    if (!sessionId) {
+      sessionId =
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : `session-${Date.now()}`;
+    }
+    return sessionId;
+  };
+})();
+
+const extractSlots = (
+  slots:
+    | Record<string, { value?: { interpretedValue?: string } } | null>
+    | null
+    | undefined,
+): Record<string, string> | undefined => {
+  if (!slots) return undefined;
+  const mapped: Record<string, string> = {};
+  Object.entries(slots).forEach(([key, value]) => {
+    const interpreted = value?.value?.interpretedValue;
+    if (interpreted) {
+      mapped[key] = interpreted;
+    }
+  });
+  return Object.keys(mapped).length ? mapped : undefined;
+};
+
 // Send text message to Lex bot
 export const sendMessage = async (text: string): Promise<LexResponse> => {
-  console.log('[STUB] AWS Lex - Sending message:', text);
+  const botId = import.meta.env.VITE_AWS_LEX_BOT_ID;
+  const botAliasId = import.meta.env.VITE_AWS_LEX_BOT_ALIAS_ID;
 
-  // Phase 2: Send to AWS Lex V2, process response
-  // For now, return simple pattern matching
-
-  await new Promise(resolve => setTimeout(resolve, 800)); // Simulate network delay
-
-  const lowerText = text.toLowerCase();
-
-  if (lowerText.includes('grocery') || lowerText.includes('food')) {
-    return {
-      message:
-        "I found 2 grocery stores nearby: Metro on Princess Street and FreshCo at Kingston Centre. Would you like directions to one of them?",
-      intent: 'FindService',
-      slots: { category: 'grocery' },
-    };
+  if (!botId || !botAliasId) {
+    throw new Error(
+      'Missing VITE_AWS_LEX_BOT_ID or VITE_AWS_LEX_BOT_ALIAS_ID',
+    );
   }
 
-  if (lowerText.includes('hospital') || lowerText.includes('doctor') || lowerText.includes('health')) {
-    return {
-      message:
-        "The nearest hospital is Kingston General Hospital at 76 Stuart Street. It's open 24/7 and is wheelchair accessible. Would you like me to show it on the map?",
-      intent: 'FindService',
-      slots: { category: 'healthcare' },
-    };
-  }
+  const command = new RecognizeTextCommand({
+    botId,
+    botAliasId,
+    localeId: getLexLocaleId(),
+    sessionId: getSessionId(),
+    text,
+  });
 
-  if (lowerText.includes('bank')) {
-    return {
-      message:
-        "I found 2 banks nearby: RBC Royal Bank on Princess Street and TD Canada Trust on Bath Road. Both are wheelchair accessible. Which one would you prefer?",
-      intent: 'FindService',
-      slots: { category: 'banking' },
-    };
-  }
-
-  if (lowerText.includes('pharmacy') || lowerText.includes('drugstore')) {
-    return {
-      message:
-        "Shoppers Drug Mart on Princess Street is the nearest pharmacy. It's open Mon-Sun 8am-10pm and is wheelchair accessible.",
-      intent: 'FindService',
-      slots: { category: 'pharmacy' },
-    };
-  }
+  const response = await getLexClient().send(command);
+  const message =
+    response.messages
+      ?.map(item => item.content)
+      .filter((content): content is string => !!content)
+      .join(' ') ||
+    response.inputTranscript ||
+    "I'm not sure how to respond to that yet.";
 
   return {
-    message:
-      "I can help you find healthcare facilities, grocery stores, banks, and pharmacies in Kingston. What are you looking for?",
-    intent: 'Welcome',
+    message,
+    intent: response.interpretations?.[0]?.intent?.name,
+    slots: extractSlots(response.sessionState?.intent?.slots),
   };
 };
 
