@@ -117,7 +117,7 @@ export const Map = ({
   if (error) {
     return (
       <div
-        className="flex-1 flex items-center justify-center bg-gray-100"
+        className="w-full h-full flex items-center justify-center bg-gray-100"
         role="alert"
       >
         <div className="text-center p-8">
@@ -144,7 +144,7 @@ export const Map = ({
   }
 
   return (
-    <div className="flex-1 relative">
+    <div className="w-full h-full relative">
       {isLoading && (
         <div
           className="absolute inset-0 flex items-center justify-center bg-white z-10"

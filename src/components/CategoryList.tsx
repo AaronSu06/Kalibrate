@@ -20,7 +20,7 @@ export const CategoryList = ({
   const categories = Object.keys(CATEGORY_INFO) as ServiceCategory[];
 
   return (
-    <div className="space-y-2" role="group" aria-label="Service categories">
+    <div className="space-y-0.5" role="group" aria-label="Service categories">
       {categories.map(category => {
         const info = CATEGORY_INFO[category];
         const isSelected = selectedCategories.includes(category);
@@ -31,45 +31,24 @@ export const CategoryList = ({
             key={category}
             onClick={() => onToggle(category)}
             className={`
-              w-full flex items-center justify-between p-3 rounded-lg
-              transition-all duration-200
+              w-full flex items-center justify-between px-2 py-2
+              transition-all duration-150 border-l-2
               ${
                 isSelected
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'bg-white hover:bg-gray-50 border border-gray-200'
+                  ? 'bg-neutral-900 border-neutral-400 text-white'
+                  : 'bg-transparent border-transparent text-neutral-400 hover:bg-neutral-900 hover:text-neutral-300'
               }
-              focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+              focus:outline-none focus:ring-1 focus:ring-neutral-700
             `}
             aria-pressed={isSelected}
             aria-label={`${info.label}, ${count} locations ${isSelected ? 'selected' : ''}`}
           >
-            <div className="flex items-center space-x-3">
-              <span className="text-2xl" aria-hidden="true">
-                {info.icon}
-              </span>
-              <div className="text-left">
-                <div className="font-medium">{info.label}</div>
-                <div
-                  className={`text-sm ${isSelected ? 'text-white/80' : 'text-gray-500'}`}
-                >
-                  {count} {count === 1 ? 'location' : 'locations'}
-                </div>
-              </div>
+            <div className={`text-xs ${isSelected ? 'font-medium' : 'font-normal'}`}>
+              {info.label}
             </div>
-            {isSelected && (
-              <svg
-                className="w-5 h-5"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-                aria-hidden="true"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            )}
+            <div className={`text-[10px] ${isSelected ? 'text-neutral-500' : 'text-neutral-600'}`}>
+              {count}
+            </div>
           </button>
         );
       })}
