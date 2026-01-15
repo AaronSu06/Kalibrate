@@ -119,7 +119,7 @@ export const ChatbotModal = ({
         className="absolute bottom-6 -translate-x-1/2 pointer-events-auto"
         style={{
           left: `calc(${sidebarWidth}px + (100vw - ${sidebarWidth}px) / 2)`,
-          width: `min(720px, calc(100vw - ${sidebarWidth}px - 32px))`,
+          width: `min(760px, calc(100vw - ${sidebarWidth}px - 32px))`,
         }}
       >
         <LiquidGlassCard

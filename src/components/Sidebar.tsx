@@ -24,10 +24,10 @@ export const Sidebar = ({
       >
         {/* Header */}
         <div className="relative px-6 py-5">
-          <h1 className="text-base font-semibold tracking-tight text-white/90">
+          <h1 className="text-lg font-semibold tracking-tight text-white/90">
             Kalibrate
           </h1>
-          <p className="text-xs text-white/45 mt-0.5">
+          <p className="text-sm text-white/45 mt-0.5">
             Kingston, ON
           </p>
         </div>
@@ -40,7 +40,7 @@ export const Sidebar = ({
               w-full flex items-center gap-2
               px-3 py-2 rounded-lg
               bg-white/[0.06] hover:bg-white/[0.1]
-              text-white/75 text-xs font-medium
+              text-white/75 text-sm font-medium
               transition-all duration-150
               focus:outline-none focus:ring-1 focus:ring-white/25
               shadow-[0_6px_16px_rgba(0,0,0,0.2)]
@@ -68,7 +68,7 @@ export const Sidebar = ({
 
         {/* Categories */}
         <div className="relative flex-1 overflow-y-auto px-6 py-3">
-          <h2 className="text-[10px] font-medium text-white/40 uppercase tracking-widest mb-3">
+          <h2 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">
             Categories
           </h2>
           <CategoryList
@@ -80,7 +80,7 @@ export const Sidebar = ({
 
         {/* Filter Summary */}
         <div className="relative px-6 py-3">
-          <div className="text-[10px] text-white/45">
+          <div className="text-xs text-white/45">
             <span className="text-white/80 font-medium">
               {services.length} entries
             </span>
@@ -95,7 +95,7 @@ export const Sidebar = ({
 
         {/* Footer */}
         <div className="mt-auto px-6 pb-4 pt-2">
-          <div className="flex items-center justify-between text-[10px] text-white/45">
+          <div className="flex items-center justify-between text-xs text-white/45">
             <span>© 2026 Kalibrate</span>
             <img
               src={kalibrateLogo}

@@ -12,7 +12,7 @@ function App() {
   const [selectedService, setSelectedService] = useState<
     ServiceLocation | undefined
   >();
-  const [sidebarWidth, setSidebarWidth] = useState(320);
+  const [sidebarWidth, setSidebarWidth] = useState(420);
   const [isResizing, setIsResizing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -27,8 +27,8 @@ function App() {
     if (!isResizing) return;
     
     const newWidth = e.clientX;
-    // Min 240px, Max 480px
-    if (newWidth >= 240 && newWidth <= 480) {
+    // Min 300px, Max 560px
+    if (newWidth >= 300 && newWidth <= 560) {
       setSidebarWidth(newWidth);
     }
   };

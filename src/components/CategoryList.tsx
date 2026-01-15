@@ -44,10 +44,10 @@ export const CategoryList = ({
             aria-pressed={isSelected}
             aria-label={`${info.label}, ${count} locations ${isSelected ? 'selected' : ''}`}
           >
-            <div className={`text-xs ${isSelected ? 'font-medium' : 'font-normal'}`}>
+            <div className={`text-sm ${isSelected ? 'font-medium' : 'font-normal'}`}>
               {info.label}
             </div>
-            <div className={`text-[10px] ${isSelected ? 'text-white/70' : 'text-white/45'}`}>
+            <div className={`text-xs ${isSelected ? 'text-white/70' : 'text-white/45'}`}>
               {count}
             </div>
           </button>
