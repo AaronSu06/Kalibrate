@@ -21,7 +21,19 @@ export type ServiceCategory =
   | 'banking'
   | 'pharmacy'
   | 'transportation'
-  | 'community';
+  | 'community'
+  | 'recreation';
+
+// Category colors for map visualization (bright neon colors)
+export const CATEGORY_COLORS: Record<ServiceCategory, string> = {
+  healthcare: '#FF3366',
+  grocery: '#39FF14',
+  banking: '#00BFFF',
+  pharmacy: '#BF00FF',
+  transportation: '#FFFF00',
+  community: '#00FFFF',
+  recreation: '#FF69B4',
+};
 
 export type AccessibilityFeature =
   | 'wheelchair_accessible'

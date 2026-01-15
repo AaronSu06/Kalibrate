@@ -1,6 +1,8 @@
 import type { ServiceLocation, ServiceCategory } from '@/types';
+import { loadAllServicesSync } from '@/services/geoJsonLoader';
 
-export const KINGSTON_SERVICES: ServiceLocation[] = [];
+// Load services from GeoJSON files at module initialization
+export const KINGSTON_SERVICES: ServiceLocation[] = loadAllServicesSync();
 
 // Utility function to get services by category
 export const getServicesByCategory = (category: ServiceCategory): ServiceLocation[] => {

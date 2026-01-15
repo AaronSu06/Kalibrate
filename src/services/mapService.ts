@@ -1,5 +1,6 @@
 import mapboxgl from 'mapbox-gl';
-import type { MapViewState } from '@/types';
+import type { MapViewState, ServiceLocation } from '@/types';
+import { CATEGORY_COLORS } from '@/types';
 
 export const MAPBOX_STYLE_URL =
   'mapbox://styles/skruby/cmkelghk200bd01rxa9mrhtv1';
@@ -44,20 +45,172 @@ export const createMap = (
   return map;
 };
 
-// Add service locations as a GeoJSON layer (part of the map, not DOM elements)
-export const addServiceMarkers = (map: mapboxgl.Map): void => {
+// Store service locations
+let currentServices: ServiceLocation[] = [];
+
+// Add service locations as markers on the map
+export const addServiceMarkers = (
+  map: mapboxgl.Map,
+  services: ServiceLocation[]
+): void => {
+  currentServices = services;
+
+  // Remove existing layers and source
   if (map.getLayer('service-labels')) {
     map.removeLayer('service-labels');
   }
-
   if (map.getLayer('service-circles')) {
     map.removeLayer('service-circles');
   }
-
+  if (map.getLayer('service-circles-glow')) {
+    map.removeLayer('service-circles-glow');
+  }
+  if (map.getLayer('service-circles-glow-outer')) {
+    map.removeLayer('service-circles-glow-outer');
+  }
+  if (map.getLayer('service-circles-glow-outer2')) {
+    map.removeLayer('service-circles-glow-outer2');
+  }
   if (map.getSource('services')) {
     map.removeSource('services');
   }
+
+  // Create GeoJSON from services
+  const geojson: GeoJSON.FeatureCollection = {
+    type: 'FeatureCollection',
+    features: services.map(service => ({
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: [service.coordinates.longitude, service.coordinates.latitude],
+      },
+      properties: {
+        id: service.id,
+        name: service.name,
+        category: service.category,
+        color: CATEGORY_COLORS[service.category],
+      },
+    })),
+  };
+
+  // Add the GeoJSON source
+  map.addSource('services', {
+    type: 'geojson',
+    data: geojson,
+  });
+
+  // Outermost glow layer - large soft glow
+  map.addLayer({
+    id: 'service-circles-glow-outer2',
+    type: 'circle',
+    source: 'services',
+    paint: {
+      'circle-radius': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        10, 30,
+        15, 50,
+        18, 70,
+      ],
+      'circle-color': ['get', 'color'],
+      'circle-opacity': 0.4,
+      'circle-blur': 1,
+    },
+  });
+
+  // Outer glow layer
+  map.addLayer({
+    id: 'service-circles-glow-outer',
+    type: 'circle',
+    source: 'services',
+    paint: {
+      'circle-radius': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        10, 20,
+        15, 35,
+        18, 50,
+      ],
+      'circle-color': ['get', 'color'],
+      'circle-opacity': 0.6,
+      'circle-blur': 0.7,
+    },
+  });
+
+  // Inner glow layer - bright
+  map.addLayer({
+    id: 'service-circles-glow',
+    type: 'circle',
+    source: 'services',
+    paint: {
+      'circle-radius': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        10, 12,
+        15, 20,
+        18, 30,
+      ],
+      'circle-color': ['get', 'color'],
+      'circle-opacity': 0.8,
+      'circle-blur': 0.4,
+    },
+  });
+
+  // Add main circle markers layer (bright core with white center)
+  map.addLayer({
+    id: 'service-circles',
+    type: 'circle',
+    source: 'services',
+    paint: {
+      'circle-radius': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        10, 6,
+        15, 10,
+        18, 14,
+      ],
+      'circle-color': '#ffffff',
+      'circle-stroke-width': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        10, 3,
+        15, 5,
+        18, 7,
+      ],
+      'circle-stroke-color': ['get', 'color'],
+      'circle-opacity': 1,
+    },
+  });
+
+  // Add text labels layer (visible at higher zoom)
+  map.addLayer({
+    id: 'service-labels',
+    type: 'symbol',
+    source: 'services',
+    minzoom: 15,
+    layout: {
+      'text-field': ['get', 'name'],
+      'text-size': 11,
+      'text-offset': [0, 1.2],
+      'text-anchor': 'top',
+      'text-max-width': 10,
+      'text-allow-overlap': false,
+    },
+    paint: {
+      'text-color': '#333333',
+      'text-halo-color': '#ffffff',
+      'text-halo-width': 1.5,
+    },
+  });
 };
+
+// Get current services for external use
+export const getCurrentServices = (): ServiceLocation[] => currentServices;
 
 // Fly to location with close zoom and 3D view
 export const flyToLocation = (
@@ -93,7 +246,8 @@ export const enable3DBuildings = (map: mapboxgl.Map): void => {
     return layer.type === 'symbol' && layout?.['text-field'];
   })?.id;
 
-  // Add 3D building extrusions
+  // Add 3D building extrusions with default gray color
+  // Colors will be updated by highlightServiceBuildings
   map.addLayer(
     {
       id: '3d-buildings',
@@ -104,7 +258,6 @@ export const enable3DBuildings = (map: mapboxgl.Map): void => {
       minzoom: 15,
       paint: {
         'fill-extrusion-color': '#aaa',
-        // Use an expression to get the height property from the building data
         'fill-extrusion-height': [
           'interpolate',
           ['linear'],
@@ -112,7 +265,7 @@ export const enable3DBuildings = (map: mapboxgl.Map): void => {
           15,
           0,
           15.05,
-          ['get', 'height'],
+          ['coalesce', ['get', 'height'], 10],
         ],
         'fill-extrusion-base': [
           'interpolate',
@@ -123,14 +276,14 @@ export const enable3DBuildings = (map: mapboxgl.Map): void => {
           15.05,
           ['get', 'min_height'],
         ],
-        'fill-extrusion-opacity': 0.6,
+        'fill-extrusion-opacity': 0.7,
         'fill-extrusion-vertical-gradient': true,
       },
     },
-    // Insert the layer beneath any symbol layer for proper layering
     labelLayerId
   );
 };
+
 
 // Add terrain (optional - for elevated landscapes)
 export const enableTerrain = (map: mapboxgl.Map): void => {
@@ -142,4 +295,96 @@ export const enableTerrain = (map: mapboxgl.Map): void => {
   });
 
   map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+};
+
+// Query building at a specific coordinate and return its geometry
+const queryBuildingAtPoint = (
+  map: mapboxgl.Map,
+  lng: number,
+  lat: number
+): mapboxgl.MapboxGeoJSONFeature | null => {
+  const point = map.project([lng, lat]);
+  const features = map.queryRenderedFeatures(
+    [
+      [point.x - 10, point.y - 10],
+      [point.x + 10, point.y + 10],
+    ],
+    { layers: ['3d-buildings'] }
+  );
+  return features.length > 0 ? features[0] : null;
+};
+
+// Highlight buildings at service locations by extracting their footprints
+export const highlightServiceBuildings = (
+  map: mapboxgl.Map,
+  services: ServiceLocation[]
+): void => {
+  // Remove existing highlight layer
+  if (map.getLayer('highlighted-buildings')) {
+    map.removeLayer('highlighted-buildings');
+  }
+  if (map.getSource('highlighted-buildings-source')) {
+    map.removeSource('highlighted-buildings-source');
+  }
+
+  if (!map.getLayer('3d-buildings')) return;
+
+  // Query buildings at each service location and collect their geometries
+  const buildingFeatures: GeoJSON.Feature[] = [];
+  const processedIds = new Set<string | number>();
+
+  for (const service of services) {
+    const building = queryBuildingAtPoint(
+      map,
+      service.coordinates.longitude,
+      service.coordinates.latitude
+    );
+
+    if (building && building.geometry && building.geometry.type === 'Polygon') {
+      // Avoid duplicates
+      const id = building.id ?? `${service.coordinates.longitude}-${service.coordinates.latitude}`;
+      if (processedIds.has(id)) continue;
+      processedIds.add(id);
+
+      buildingFeatures.push({
+        type: 'Feature',
+        geometry: building.geometry as GeoJSON.Polygon,
+        properties: {
+          color: CATEGORY_COLORS[service.category],
+          height: building.properties?.height ?? 15,
+          min_height: building.properties?.min_height ?? 0,
+        },
+      });
+    }
+  }
+
+  if (buildingFeatures.length === 0) return;
+
+  // Add source with building footprints
+  map.addSource('highlighted-buildings-source', {
+    type: 'geojson',
+    data: {
+      type: 'FeatureCollection',
+      features: buildingFeatures,
+    },
+  });
+
+  // Add highlighted buildings layer on top of regular buildings
+  map.addLayer({
+    id: 'highlighted-buildings',
+    type: 'fill-extrusion',
+    source: 'highlighted-buildings-source',
+    paint: {
+      'fill-extrusion-color': ['get', 'color'],
+      'fill-extrusion-height': ['get', 'height'],
+      'fill-extrusion-base': ['get', 'min_height'],
+      'fill-extrusion-opacity': 0.9,
+    },
+  });
+};
+
+// Re-query and update building highlights when map moves
+export const refreshBuildingHighlights = (map: mapboxgl.Map): void => {
+  if (currentServices.length === 0) return;
+  highlightServiceBuildings(map, currentServices);
 };
