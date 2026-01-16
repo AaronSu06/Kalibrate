@@ -1,4 +1,6 @@
 import mapboxgl from 'mapbox-gl';
+import * as turf from '@turf/turf';
+import type { Feature, Polygon, MultiPolygon } from 'geojson';
 import type { MapViewState, ServiceLocation } from '@/types';
 import { CATEGORY_COLORS } from '@/types';
 
@@ -44,7 +46,6 @@ export const createMap = (
     trackResize: false, // Disable resize tracking
     refreshExpiredTiles: false,
     maxTileCacheSize: 10, // Minimal tile cache (was 50)
-    localIdeographFontFamily: '',
     collectResourceTiming: false,
     crossSourceCollisions: false,
     preserveDrawingBuffer: false,
@@ -61,7 +62,140 @@ export const createMap = (
     'top-right'
   );
 
+  // Apply Kingston mask when map loads
+  map.on('load', () => {
+    applyKingstonMask(map).catch(err => {
+      console.error('Failed to apply Kingston mask:', err);
+    });
+  });
+
   return map;
+};
+
+// Apply a mask to display only Kingston, with everything else blacked out
+export const applyKingstonMask = async (map: mapboxgl.Map): Promise<void> => {
+  try {
+    console.log('Starting Kingston mask application...');
+    
+    // 1. Define the world-spanning polygon (the "Mask Base")
+    const world = turf.polygon([[
+      [-180, -90],
+      [180, -90],
+      [180, 90],
+      [-180, 90],
+      [-180, -90]
+    ]]);
+
+    // 2. Fetch the Kingston, Ontario boundary from OpenStreetMap (Nominatim)
+    const response = await fetch(
+      'https://nominatim.openstreetmap.org/search?city=kingston&state=ontario&country=canada&polygon_geojson=1&format=json',
+      {
+        headers: {
+          'User-Agent': 'AccessKingston/1.0' // Nominatim requires a User-Agent
+        }
+      }
+    );
+    
+    if (!response.ok) {
+      throw new Error(`Nominatim API returned ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data || data.length === 0) {
+      console.error('Could not fetch Kingston boundary from Nominatim');
+      return;
+    }
+
+    console.log('Fetched Kingston boundary data:', data[0]);
+
+    // Get the first result's geometry
+    const kingstonGeometry = data[0].geojson;
+    
+    // Convert to Turf format - handle both Polygon and MultiPolygon
+    let kingstonFeature: Feature<Polygon | MultiPolygon>;
+    if (kingstonGeometry.type === 'Polygon') {
+      kingstonFeature = turf.polygon(kingstonGeometry.coordinates);
+    } else if (kingstonGeometry.type === 'MultiPolygon') {
+      kingstonFeature = turf.multiPolygon(kingstonGeometry.coordinates);
+    } else {
+      console.error('Unexpected geometry type:', kingstonGeometry.type);
+      return;
+    }
+
+    console.log('Kingston feature created:', kingstonFeature.geometry.type);
+
+    // 3. Use Turf to "cut out" Kingston from the World
+    // Create a polygon with a hole (world minus Kingston)
+    const masked = turf.difference(turf.featureCollection([world, kingstonFeature]));
+
+    if (!masked) {
+      console.error('Failed to create mask difference - turf.difference returned null');
+      return;
+    }
+
+    console.log('Mask created successfully, geometry type:', masked.geometry?.type);
+
+    // Remove existing mask layers if they exist
+    if (map.getLayer('kingston-outline')) {
+      map.removeLayer('kingston-outline');
+    }
+    if (map.getLayer('kingston-mask-layer')) {
+      map.removeLayer('kingston-mask-layer');
+    }
+    if (map.getSource('kingston-mask')) {
+      map.removeSource('kingston-mask');
+    }
+
+    // 4. Add the result to the Mapbox Map
+    map.addSource('kingston-mask', {
+      type: 'geojson',
+      data: masked
+    });
+
+    // Find the first symbol layer to insert the mask before labels
+    const layers = map.getStyle()?.layers || [];
+    let firstSymbolId: string | undefined;
+    for (const layer of layers) {
+      if (layer.type === 'symbol') {
+        firstSymbolId = layer.id;
+        break;
+      }
+    }
+
+    // Add the dark mask layer - insert before labels
+    map.addLayer({
+      id: 'kingston-mask-layer',
+      type: 'fill',
+      source: 'kingston-mask',
+      layout: {},
+      paint: {
+        'fill-color': '#000000', // Black
+        'fill-opacity': 0.9     // Higher opacity for better masking
+      }
+    }, firstSymbolId);
+
+    // Add a sharp white outline around Kingston (on the mask boundary)
+    map.addLayer({
+      id: 'kingston-outline',
+      type: 'line',
+      source: 'kingston-mask',
+      paint: {
+        'line-color': '#ffffff',
+        'line-width': 2,
+        'line-opacity': 0.8
+      }
+    }, firstSymbolId);
+
+    console.log('Kingston mask applied successfully');
+  } catch (error) {
+    console.error('Error applying Kingston mask:', error);
+    // Log more details about the error
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+  }
 };
 
 // Store service locations and highlighted service IDs

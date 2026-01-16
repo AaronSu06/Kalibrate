@@ -16,6 +16,7 @@
     "@aws-sdk/client-transcribe-streaming": "^3.970.0",
     "@aws-sdk/credential-provider-cognito-identity": "^3.970.0",
     "@aws-sdk/credential-providers": "^3.970.0",
+    "@turf/turf": "^7.3.2",
     "clsx": "^2.1.1",
     "framer-motion": "^12.26.2",
     "lucide-react": "^0.562.0",
