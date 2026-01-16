@@ -20,11 +20,11 @@ const SidebarComponent = ({
       className="w-full h-full border-white/10 bg-neutral-950/60 shadow-[0_20px_50px_rgba(0,0,0,0.55)]"
     >
       <aside
-        className="relative w-full h-full min-h-screen flex flex-col text-white"
+        className="relative w-full h-full flex flex-col text-white overflow-hidden"
         aria-label="Service categories and filters"
       >
-        {/* Header */}
-        <div className="relative px-6 py-5">
+        {/* Header - Fixed */}
+        <div className="relative px-6 py-5 flex-shrink-0">
           <h1 className="text-xl font-semibold tracking-tight text-white/90">
             Kalibrate
           </h1>
@@ -33,8 +33,8 @@ const SidebarComponent = ({
           </p>
         </div>
 
-        {/* Voice Assistant Button */}
-        <div className="relative px-6 py-2">
+        {/* Voice Assistant Button - Fixed */}
+        <div className="relative px-6 py-2 flex-shrink-0">
           <button
             onClick={onVoiceAssistantOpen}
             className="
@@ -67,8 +67,8 @@ const SidebarComponent = ({
           </button>
         </div>
 
-        {/* Categories */}
-        <div className="relative flex-1 overflow-y-auto px-6 py-3">
+        {/* Categories - Scrollable */}
+        <div className="relative flex-1 overflow-y-auto px-6 py-3 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent hover:scrollbar-thumb-white/20 min-h-0">
           <h2 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">
             Categories
           </h2>
@@ -79,31 +79,34 @@ const SidebarComponent = ({
           />
         </div>
 
-        {/* Filter Summary */}
-        <div className="relative px-6 py-3">
-          <div className="text-xs text-white/45">
-            <span className="text-white/80 font-medium">
-              {services.length} entries
-            </span>
-            {selectedCategories.length > 0 && (
-              <span>
-                {' '}
-                · {selectedCategories.length} active
+        {/* Footer Container - Fixed at bottom */}
+        <div className="flex-shrink-0 mt-auto">
+          {/* Filter Summary */}
+          <div className="relative px-6 py-3 border-t border-white/5">
+            <div className="text-xs text-white/45">
+              <span className="text-white/80 font-medium">
+                {services.length} entries
               </span>
-            )}
+              {selectedCategories.length > 0 && (
+                <span>
+                  {' '}
+                  · {selectedCategories.length} active
+                </span>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="mt-auto px-6 pb-4 pt-2">
-          <div className="flex items-center justify-between text-xs text-white/45">
-            <span>© 2026 Kalibrate</span>
-            <img
-              src={kalibrateLogo}
-              alt="Kalibrate logo"
-              className="h-5 w-auto object-contain"
-              loading="lazy"
-            />
+          {/* Footer */}
+          <div className="px-6 pb-4 pt-2">
+            <div className="flex items-center justify-between text-xs text-white/45">
+              <span>© 2026 Kalibrate</span>
+              <img
+                src={kalibrateLogo}
+                alt="Kalibrate logo"
+                className="h-5 w-auto object-contain"
+                loading="lazy"
+              />
+            </div>
           </div>
         </div>
       </aside>
