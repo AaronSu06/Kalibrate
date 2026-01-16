@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback, useMemo } from 'react';
 import { Map } from './components/Map';
 import { Sidebar } from './components/Sidebar';
 import { ChatbotModal } from './components/ChatbotModal';
@@ -19,11 +19,11 @@ function App() {
   const { filterState, filteredServices, toggleCategory } =
     useServiceFilter(KINGSTON_SERVICES);
 
-  const handleMouseDown = () => {
+  const handleMouseDown = useCallback(() => {
     setIsResizing(true);
-  };
+  }, []);
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isResizing) return;
     
     const newWidth = e.clientX;
@@ -31,16 +31,24 @@ function App() {
     if (newWidth >= 300 && newWidth <= 560) {
       setSidebarWidth(newWidth);
     }
-  };
+  }, [isResizing]);
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setIsResizing(false);
-  };
+  }, []);
+
+  const handleChatbotOpen = useCallback(() => {
+    setIsChatbotOpen(true);
+  }, []);
+
+  const handleChatbotClose = useCallback(() => {
+    setIsChatbotOpen(false);
+  }, []);
 
   return (
     <div 
       ref={containerRef}
-      className="h-screen relative overflow-hidden"
+      className={`h-screen relative overflow-hidden ${isResizing ? 'select-none' : ''}`}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
@@ -69,7 +77,7 @@ function App() {
             services={filteredServices}
             selectedCategories={filterState.selectedCategories}
             onCategoryToggle={toggleCategory}
-            onVoiceAssistantOpen={() => setIsChatbotOpen(true)}
+            onVoiceAssistantOpen={handleChatbotOpen}
           />
         </ErrorBoundary>
         
@@ -85,7 +93,7 @@ function App() {
       {/* Chatbot Modal */}
       <ChatbotModal
         isOpen={isChatbotOpen}
-        onClose={() => setIsChatbotOpen(false)}
+        onClose={handleChatbotClose}
         services={filteredServices}
         sidebarWidth={sidebarWidth}
       />
