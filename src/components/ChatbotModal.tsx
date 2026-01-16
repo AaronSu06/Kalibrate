@@ -1,14 +1,228 @@
-import { useState, useRef, useEffect } from 'react';
-import type { ChatbotModalProps, ChatMessage } from '@/types';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import type { ChatbotModalProps, ChatMessage, ChatAction, ServiceLocation } from '@/types';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import * as lexService from '@/services/awsLex';
 import * as transcribeService from '@/services/awsTranscribe';
 import { LiquidGlassCard } from '@/components/ui/liquid-glass';
 
+const HOURS_INTENT_REGEX = /\b(hours?|open|opening|closing|close|schedule)\b/;
+
+const STOP_WORDS = new Set([
+  'the',
+  'a',
+  'an',
+  'and',
+  'or',
+  'for',
+  'to',
+  'of',
+  'on',
+  'in',
+  'at',
+  'by',
+  'near',
+  'around',
+  'with',
+  'without',
+  'from',
+  'hours',
+  'hour',
+  'open',
+  'opening',
+  'close',
+  'closing',
+  'when',
+  'what',
+  'is',
+  'are',
+  'do',
+  'does',
+  'tell',
+  'me',
+  'please',
+  'show',
+  'give',
+  'need',
+  'want',
+  'looking',
+  'find',
+  'get',
+  'info',
+  'information',
+  'details',
+  'view',
+  'map',
+  'service',
+  'services',
+  'center',
+  'centre',
+  'clinic',
+  'hospital',
+  'school',
+  'office',
+  'community',
+  'association',
+  'inc',
+  'ltd',
+  'corp',
+  'company',
+  'co',
+  'limited',
+  'station',
+  'department',
+  'church',
+  'ministry',
+  'temple',
+  'mosque',
+  'synagogue',
+  'bank',
+  'library',
+  'city',
+  'town',
+  'kingston',
+]);
+
+const normalizeText = (value: string): string => {
+  return value
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+const tokenize = (value: string): string[] => {
+  const normalized = normalizeText(value);
+  if (!normalized) return [];
+  return normalized
+    .split(' ')
+    .filter(token => token.length >= 2 && !STOP_WORDS.has(token));
+};
+
+const isHoursIntent = (value: string): boolean => {
+  return HOURS_INTENT_REGEX.test(normalizeText(value));
+};
+
+const getActionIntent = (value: string): ChatAction['kind'] | null => {
+  const normalized = normalizeText(value);
+  if (/\b(show|open|focus|view)\b.*\bmap\b/.test(normalized)) {
+    return 'show_on_map';
+  }
+  if (/\b(details?|detail|info|information)\b/.test(normalized)) {
+    return 'show_details';
+  }
+  return null;
+};
+
+const getDetailString = (
+  details: ServiceLocation['details'] | undefined,
+  key: string,
+): string | undefined => {
+  if (!details) return undefined;
+  const value = details[key];
+  if (typeof value === 'string' && value.trim()) {
+    return value.trim();
+  }
+  return undefined;
+};
+
+const formatDetailValue = (value: unknown): string | undefined => {
+  if (typeof value === 'string' && value.trim()) return value.trim();
+  if (typeof value === 'number') return String(value);
+  if (Array.isArray(value) && value.length > 0) {
+    return value.map(item => String(item)).join(', ');
+  }
+  return undefined;
+};
+
+type ServiceIndexEntry = {
+  service: ServiceLocation;
+  normalizedName: string;
+  nameTokens: string[];
+  addressTokens: string[];
+};
+
+const buildServiceIndex = (services: ServiceLocation[]): ServiceIndexEntry[] => {
+  return services.map(service => ({
+    service,
+    normalizedName: normalizeText(service.name),
+    nameTokens: tokenize(service.name),
+    addressTokens: tokenize(service.address || ''),
+  }));
+};
+
+const findBestServiceMatch = (
+  input: string,
+  index: ServiceIndexEntry[],
+): ServiceLocation | null => {
+  const normalizedInput = normalizeText(input);
+  if (!normalizedInput) return null;
+
+  let bestDirect: ServiceIndexEntry | null = null;
+  let bestDirectLength = 0;
+  index.forEach(entry => {
+    if (
+      entry.normalizedName &&
+      normalizedInput.includes(entry.normalizedName) &&
+      entry.normalizedName.length > bestDirectLength
+    ) {
+      bestDirect = entry;
+      bestDirectLength = entry.normalizedName.length;
+    }
+  });
+  if (bestDirect) return bestDirect.service;
+
+  const inputTokens = new Set(tokenize(input));
+  if (inputTokens.size === 0) return null;
+
+  let best: ServiceIndexEntry | null = null;
+  let bestScore = 0;
+  let bestAddressMatches = 0;
+  let bestNameLength = 0;
+
+  index.forEach(entry => {
+    if (entry.nameTokens.length === 0) return;
+
+    const nameMatches = entry.nameTokens.filter(token => inputTokens.has(token))
+      .length;
+    if (nameMatches === 0) return;
+
+    const strongSingleToken =
+      entry.nameTokens.length === 1 &&
+      nameMatches === 1 &&
+      entry.nameTokens[0].length >= 4;
+    if (!strongSingleToken && nameMatches < 2) return;
+
+    const addressMatches = entry.addressTokens.filter(token =>
+      inputTokens.has(token),
+    ).length;
+    const score =
+      nameMatches / entry.nameTokens.length +
+      Math.min(0.15, addressMatches * 0.05);
+
+    if (
+      score > bestScore ||
+      (score === bestScore && addressMatches > bestAddressMatches) ||
+      (score === bestScore &&
+        addressMatches === bestAddressMatches &&
+        entry.normalizedName.length > bestNameLength)
+    ) {
+      best = entry;
+      bestScore = score;
+      bestAddressMatches = addressMatches;
+      bestNameLength = entry.normalizedName.length;
+    }
+  });
+
+  return best ? best.service : null;
+};
+
 export const ChatbotModal = ({
   isOpen,
   onClose,
+  services,
   sidebarWidth,
+  onServiceSelect,
 }: ChatbotModalProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -21,7 +235,10 @@ export const ChatbotModal = ({
   const [isSending, setIsSending] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [micPermission, setMicPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt');
+  const [lastMatchedServiceId, setLastMatchedServiceId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const serviceIndex = useMemo(() => buildServiceIndex(services), [services]);
 
   const {
     isRecording,
@@ -51,25 +268,142 @@ export const ChatbotModal = ({
   useEffect(() => {
     if (!isOpen) {
       setHasInteracted(false);
+      setLastMatchedServiceId(null);
     }
   }, [isOpen]);
 
+  const handleActionClick = useCallback((action: ChatAction) => {
+    const service = services.find(item => item.id === action.serviceId);
+    if (!service) return;
+    setLastMatchedServiceId(service.id);
+    onServiceSelect(service);
+  }, [services, onServiceSelect]);
+
+  const getLocalHoursResponse = useCallback((text: string) => {
+    if (!isHoursIntent(text)) return null;
+
+    const matchedService = findBestServiceMatch(text, serviceIndex);
+    if (!matchedService) {
+      const promptMessage: ChatMessage = {
+        id: `bot-${Date.now()}`,
+        text: 'I can give opening hours for a specific place. Say the full service name, like "Kingston General Hospital".',
+        sender: 'bot',
+        timestamp: new Date(),
+      };
+      return { message: promptMessage, matchedServiceId: null };
+    }
+
+    const details = matchedService.details;
+    const hardcodedHours =
+      matchedService.id === 'poi_100517'
+        ? 'Open 24/7, Monday to Sunday'
+        : undefined;
+    const hours =
+      hardcodedHours ||
+      matchedService.hours ||
+      getDetailString(details, 'hours');
+
+    const website =
+      matchedService.website ||
+      getDetailString(details, 'website');
+    const infoUrl = getDetailString(details, 'info_url');
+    const link = website || infoUrl;
+    const linkLabel = website ? 'Website' : 'Info';
+
+    const extraDetails: string[] = [];
+    const subDescription = getDetailString(details, 'sub_description');
+    if (subDescription) {
+      extraDetails.push(`Type: ${subDescription}.`);
+    }
+    const affordability = getDetailString(details, 'affordability');
+    if (affordability) {
+      extraDetails.push(`Affordability: ${affordability}.`);
+    }
+    const region = getDetailString(details, 'region');
+    if (region) {
+      extraDetails.push(`Region: ${region}.`);
+    }
+    const servicesProvided = formatDetailValue(details?.services);
+    if (servicesProvided) {
+      extraDetails.push(`Services: ${servicesProvided}.`);
+    }
+
+    const messageParts = [
+      `Hours for ${matchedService.name}: ${hours || 'not listed yet'}.`,
+    ];
+    if (link) {
+      messageParts.push(`${linkLabel}: ${link}.`);
+    }
+    if (extraDetails.length > 0) {
+      messageParts.push(extraDetails.join(' '));
+    }
+    messageParts.push('Want me to show it on the map?');
+
+    const actions: ChatAction[] = [
+      {
+        id: `action-map-${matchedService.id}`,
+        label: 'Show on map',
+        kind: 'show_on_map',
+        serviceId: matchedService.id,
+      },
+    ];
+
+    const botMessage: ChatMessage = {
+      id: `bot-${Date.now()}`,
+      text: messageParts.join(' '),
+      sender: 'bot',
+      timestamp: new Date(),
+      actions,
+    };
+
+    return { message: botMessage, matchedServiceId: matchedService.id };
+  }, [serviceIndex]);
+
   const handleSendMessage = async (text: string) => {
-    if (!text.trim()) return;
+    const trimmedText = text.trim();
+    if (!trimmedText) return;
     setHasInteracted(true);
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
-      text: text.trim(),
+      text: trimmedText,
       sender: 'user',
       timestamp: new Date(),
     };
+
+    const actionIntent = getActionIntent(trimmedText);
+    if (actionIntent && lastMatchedServiceId) {
+      const matchedService = services.find(
+        service => service.id === lastMatchedServiceId,
+      );
+      if (matchedService) {
+        onServiceSelect(matchedService);
+        const actionMessage: ChatMessage = {
+          id: `bot-${Date.now()}`,
+          text:
+            actionIntent === 'show_on_map'
+              ? `Showing ${matchedService.name} on the map and opening details.`
+              : `Opening details for ${matchedService.name} and focusing the map.`,
+          sender: 'bot',
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, userMessage, actionMessage]);
+        return;
+      }
+    }
+
+    const localResponse = getLocalHoursResponse(trimmedText);
+    if (localResponse) {
+      setLastMatchedServiceId(localResponse.matchedServiceId);
+      setMessages(prev => [...prev, userMessage, localResponse.message]);
+      return;
+    }
 
     setMessages(prev => [...prev, userMessage]);
     setIsSending(true);
 
     try {
-      const response = await lexService.sendMessage(text.trim());
+      const response = await lexService.sendMessage(trimmedText);
       const botMessage = lexService.lexResponseToChatMessage(response);
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
@@ -180,6 +514,19 @@ export const ChatbotModal = ({
                         minute: '2-digit',
                       })}
                     </p>
+                    {message.actions && message.actions.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {message.actions.map(action => (
+                          <button
+                            key={action.id}
+                            onClick={() => handleActionClick(action)}
+                            className="px-2 py-1 rounded-md text-[10px] uppercase tracking-widest border border-white/10 bg-white/[0.08] text-white/70 hover:bg-white/[0.16] hover:text-white transition-colors"
+                          >
+                            {action.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
