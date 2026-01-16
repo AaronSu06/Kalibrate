@@ -49,6 +49,7 @@ const MapComponent = ({
   services,
   selectedService,
   onServiceSelect,
+  resetViewSignal,
 }: MapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -75,6 +76,21 @@ const MapComponent = ({
     const service = servicesRef.current.find(s => s.id === serviceId);
     if (service) {
       onServiceSelectRef.current(service);
+    }
+  }, []);
+
+  // Handler to reset map view to default
+  const handleResetView = useCallback(() => {
+    if (map.current) {
+      map.current.flyTo({
+        center: [KINGSTON_CENTER.longitude, KINGSTON_CENTER.latitude],
+        zoom: KINGSTON_CENTER.zoom,
+        bearing: KINGSTON_CENTER.bearing,
+        pitch: KINGSTON_CENTER.pitch,
+        essential: true,
+        duration: 800,
+        easing: (t) => t,
+      });
     }
   }, []);
 
@@ -249,6 +265,12 @@ const MapComponent = ({
       flyToLocation(map.current, selectedService.coordinates);
     }
   }, [selectedService]);
+
+  // Reset map view when requested by parent
+  useEffect(() => {
+    if (!resetViewSignal) return;
+    handleResetView();
+  }, [resetViewSignal, handleResetView]);
 
   if (error) {
     return (

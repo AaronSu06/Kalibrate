@@ -1,20 +1,98 @@
-import { memo } from 'react';
-import type { SidebarProps } from '@/types';
+import { memo, useState, useMemo } from 'react';
+import type { SidebarProps, ServiceLocation } from '@/types';
 import { CategoryList } from './CategoryList';
 import { ServiceDetail } from './ServiceDetail';
-import { getServiceCounts } from '@/data/services';
+import { getServiceCounts, KINGSTON_SERVICES } from '@/data/services';
 import { LiquidGlassCard } from '@/components/ui/liquid-glass';
 import kalibrateLogo from '@/public/kali.webp';
 
+// Search result item component
+const SearchResultItem = memo(({ 
+  service, 
+  onSelect 
+}: { 
+  service: ServiceLocation; 
+  onSelect: (service: ServiceLocation) => void;
+}) => (
+  <button
+    onClick={() => onSelect(service)}
+    className="w-full text-left px-3 py-2 rounded-md hover:bg-white/[0.06] transition-colors"
+  >
+    <div className="text-sm text-white/90 truncate">{service.name}</div>
+    <div className="text-xs text-white/45 truncate">{service.address}</div>
+  </button>
+));
+
+SearchResultItem.displayName = 'SearchResultItem';
+
 const SidebarComponent = ({
   services,
+  allServices,
   selectedCategories,
   onCategoryToggle,
   onVoiceAssistantOpen,
   selectedService,
   onServiceClose,
+  onServiceSelect,
 }: SidebarProps) => {
   const serviceCounts = getServiceCounts();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Improved search with relevance scoring
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase().trim();
+    const queryWords = query.split(/\s+/);
+    
+    // Score and filter services
+    const scoredResults = KINGSTON_SERVICES
+      .map(service => {
+        const name = service.name.toLowerCase();
+        const address = service.address.toLowerCase();
+        const description = service.description?.toLowerCase() || '';
+        const category = service.category.toLowerCase();
+        
+        let score = 0;
+        
+        // Exact name match (highest priority)
+        if (name === query) score += 100;
+        // Name starts with query
+        else if (name.startsWith(query)) score += 50;
+        // Name contains query as a word
+        else if (name.includes(` ${query}`) || name.includes(`${query} `)) score += 40;
+        // Name contains query
+        else if (name.includes(query)) score += 30;
+        
+        // Check each query word
+        for (const word of queryWords) {
+          if (word.length < 2) continue;
+          // Word match in name
+          if (name.split(/\s+/).some(w => w.startsWith(word))) score += 20;
+          // Word match in address
+          if (address.split(/\s+/).some(w => w.startsWith(word))) score += 10;
+          // Category match
+          if (category.includes(word)) score += 15;
+          // Description match
+          if (description.includes(word)) score += 5;
+        }
+        
+        // Address contains full query
+        if (address.includes(query)) score += 8;
+        
+        return { service, score };
+      })
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 12)
+      .map(item => item.service);
+    
+    return scoredResults;
+  }, [searchQuery]);
+
+  const handleSearchSelect = (service: ServiceLocation) => {
+    setSearchQuery('');
+    onServiceSelect?.(service);
+  };
 
   return (
     <LiquidGlassCard
@@ -38,6 +116,62 @@ const SidebarComponent = ({
               <p className="text-base text-white/45 mt-0.5">
                 Kingston, ON
               </p>
+            </div>
+
+            {/* Search Bar */}
+            <div className="relative px-6 pb-2 flex-shrink-0">
+              <div className="relative">
+                <svg
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search services..."
+                  className="
+                    w-full pl-10 pr-3 py-2 rounded-lg
+                    bg-white/[0.06] hover:bg-white/[0.08]
+                    text-white/90 text-sm placeholder-white/40
+                    border border-transparent
+                    focus:outline-none focus:border-white/20 focus:bg-white/[0.08]
+                    transition-all duration-150
+                  "
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              
+              {/* Search Results Dropdown */}
+              {searchResults.length > 0 && (
+                <div className="absolute left-6 right-6 top-full mt-1 z-20 bg-neutral-900/95 backdrop-blur-xl rounded-lg border border-white/10 shadow-xl max-h-64 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
+                  {searchResults.map(service => (
+                    <SearchResultItem
+                      key={service.id}
+                      service={service}
+                      onSelect={handleSearchSelect}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Voice Assistant Button - Fixed */}

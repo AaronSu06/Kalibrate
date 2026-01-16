@@ -19,6 +19,7 @@ function App() {
   >();
   const [sidebarWidth, setSidebarWidth] = useState(420);
   const [isResizing, setIsResizing] = useState(false);
+  const [resetViewSignal, setResetViewSignal] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { filterState, filteredServices, toggleCategory } =
@@ -61,6 +62,10 @@ function App() {
   const handleServiceSelect = useCallback((service: ServiceLocation) => {
     setSelectedService(service);
   }, []);
+
+  const handleResetView = useCallback(() => {
+    setResetViewSignal((value) => value + 1);
+  }, []);
   return (
     <div 
       ref={containerRef}
@@ -77,6 +82,7 @@ function App() {
             selectedService={selectedService}
             onServiceSelect={handleServiceSelect}
             filterState={filterState}
+            resetViewSignal={resetViewSignal}
           />
         </ErrorBoundary>
       </div>
@@ -86,6 +92,7 @@ function App() {
         selectedCategories={filterState.selectedCategories}
         onCategoryToggle={toggleCategory}
         sidebarWidth={sidebarWidth}
+        onResetView={handleResetView}
       />
 
       {/* Sidebar with glass effect - Overlays the map */}
@@ -96,11 +103,13 @@ function App() {
         <ErrorBoundary fallbackTitle="Sidebar Error">
           <MemoizedSidebar
             services={filteredServices}
+            allServices={KINGSTON_SERVICES}
             selectedCategories={filterState.selectedCategories}
             onCategoryToggle={toggleCategory}
             onVoiceAssistantOpen={handleChatbotOpen}
             selectedService={selectedService}
             onServiceClose={handleServiceClose}
+            onServiceSelect={handleServiceSelect}
           />
         </ErrorBoundary>
         

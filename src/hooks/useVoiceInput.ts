@@ -25,19 +25,23 @@ export const useVoiceInput = () => {
         return;
       }
 
+      // Clear any previous errors
+      setState(prev => ({ ...prev, error: undefined }));
+
       const hasPermission = await transcribeService.requestMicrophonePermission();
       if (!hasPermission) {
-        setState(prev => ({ ...prev, error: 'Microphone permission denied' }));
+        setState(prev => ({ ...prev, error: 'Please allow microphone access and try again.' }));
         return;
       }
 
       setState({ isRecording: true, isProcessing: false, error: undefined });
       await transcribeService.startRecording();
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to start recording';
       setState(prev => ({
         ...prev,
         isRecording: false,
-        error: getErrorMessage(error, 'Failed to start recording'),
+        error: message === 'not-allowed' ? 'Please allow microphone access in your browser settings.' : message,
       }));
     }
   }, []);

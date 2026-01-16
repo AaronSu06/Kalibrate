@@ -103,15 +103,18 @@ export interface MapProps {
   selectedService?: ServiceLocation;
   onServiceSelect: (service: ServiceLocation) => void;
   filterState: FilterState;
+  resetViewSignal?: number;
 }
 
 export interface SidebarProps {
   services: ServiceLocation[];
+  allServices: ServiceLocation[];
   selectedCategories: ServiceCategory[];
   onCategoryToggle: (category: ServiceCategory) => void;
   onVoiceAssistantOpen: () => void;
   selectedService?: ServiceLocation;
   onServiceClose: () => void;
+  onServiceSelect?: (service: ServiceLocation) => void;
 }
 
 export interface ChatbotModalProps {

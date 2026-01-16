@@ -11,10 +11,10 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@aws-sdk/client-cognito-identity": "^3.450.0",
+    "@aws-sdk/client-cognito-identity": "^3.970.0",
     "@aws-sdk/client-lex-runtime-v2": "^3.970.0",
     "@aws-sdk/client-transcribe-streaming": "^3.970.0",
-    "@aws-sdk/credential-provider-cognito-identity": "^3.450.0",
+    "@aws-sdk/credential-provider-cognito-identity": "^3.970.0",
     "@aws-sdk/credential-providers": "^3.970.0",
     "clsx": "^2.1.1",
     "framer-motion": "^12.26.2",

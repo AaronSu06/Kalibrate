@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { ChatbotModalProps, ChatMessage } from '@/types';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import * as lexService from '@/services/awsLex';
+import * as transcribeService from '@/services/awsTranscribe';
 import { LiquidGlassCard } from '@/components/ui/liquid-glass';
 
 export const ChatbotModal = ({
@@ -19,6 +20,7 @@ export const ChatbotModal = ({
   ]);
   const [isSending, setIsSending] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
+  const [micPermission, setMicPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -30,6 +32,15 @@ export const ChatbotModal = ({
     clearError,
     isSupported: isVoiceSupported,
   } = useVoiceInput();
+
+  // Request microphone permission when modal opens
+  useEffect(() => {
+    if (isOpen && isVoiceSupported && micPermission === 'prompt') {
+      transcribeService.requestMicrophonePermission().then(granted => {
+        setMicPermission(granted ? 'granted' : 'denied');
+      });
+    }
+  }, [isOpen, isVoiceSupported, micPermission]);
 
   // Auto-scroll to bottom
   useEffect(() => {

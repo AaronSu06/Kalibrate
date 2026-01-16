@@ -68,40 +68,62 @@ interface FloatingCategoryBarProps {
   selectedCategories: ServiceCategory[];
   onCategoryToggle: (category: ServiceCategory) => void;
   sidebarWidth: number;
+  onResetView: () => void;
 }
 
 const FloatingCategoryBar = memo(({
   selectedCategories,
   onCategoryToggle,
   sidebarWidth,
+  onResetView,
 }: FloatingCategoryBarProps) => {
   return (
     <div 
       className="absolute top-4 z-20 flex items-center gap-3 overflow-x-auto scrollbar-hide"
       style={{ left: `${sidebarWidth + 16}px`, right: '70px' }}
     >
-      {QUICK_CATEGORIES.map((category) => {
-        const isSelected = selectedCategories.includes(category.id);
-        return (
-          <button
-            key={category.id}
-            onClick={() => onCategoryToggle(category.id)}
-            className={`
-              flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium
-              whitespace-nowrap transition-all duration-200
-              backdrop-blur-xl
-              border shadow-lg
-              ${isSelected 
-                ? 'bg-white/25 text-white border-white/40' 
-                : 'bg-neutral-900/70 text-white/70 border-white/15 hover:text-white hover:bg-neutral-800/80'
-              }
-            `}
-          >
-            {category.icon}
-            <span>{category.label}</span>
-          </button>
-        );
-      })}
+      <div className="flex items-center gap-3">
+        {QUICK_CATEGORIES.map((category) => {
+          const isSelected = selectedCategories.includes(category.id);
+          return (
+            <button
+              key={category.id}
+              onClick={() => onCategoryToggle(category.id)}
+              className={`
+                flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium
+                whitespace-nowrap transition-all duration-200
+                backdrop-blur-xl
+                border shadow-lg
+                ${isSelected 
+                  ? 'bg-white/25 text-white border-white/40' 
+                  : 'bg-neutral-900/70 text-white/70 border-white/15 hover:text-white hover:bg-neutral-800/80'
+                }
+              `}
+            >
+              {category.icon}
+              <span>{category.label}</span>
+            </button>
+          );
+        })}
+      </div>
+      <button
+        onClick={onResetView}
+        className="
+          ml-auto flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium
+          whitespace-nowrap transition-all duration-200
+          backdrop-blur-xl
+          border shadow-lg
+          bg-neutral-900/70 text-white/70 border-white/15 hover:text-white hover:bg-neutral-800/80
+        "
+        aria-label="Reset map view"
+        title="Reset map view"
+      >
+        <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M10 3v2m0 10v2m7-7h-2M5 10H3m9.07-4.07l1.42-1.42M5.51 14.49l-1.42 1.42M14.49 14.49l1.42 1.42M5.51 5.51L4.09 4.09" />
+          <circle cx="10" cy="10" r="7" />
+        </svg>
+        <span>Reset View</span>
+      </button>
     </div>
   );
 });

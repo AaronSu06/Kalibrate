@@ -168,6 +168,36 @@ export const isBrowserSupported = (): boolean => {
   return !!getSpeechRecognitionClass();
 };
 
+let micPermissionGranted = false;
+
 export const requestMicrophonePermission = async (): Promise<boolean> => {
-  return isBrowserSupported();
+  if (!isBrowserSupported()) return false;
+  
+  // If already granted in this session, return true
+  if (micPermissionGranted) return true;
+  
+  try {
+    // Check permission status first if available
+    if (navigator.permissions) {
+      try {
+        const status = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        if (status.state === 'granted') {
+          micPermissionGranted = true;
+          return true;
+        }
+      } catch {
+        // permissions.query may not support microphone in all browsers
+      }
+    }
+    
+    // Request microphone access
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Stop all tracks immediately - we just needed the permission
+    stream.getTracks().forEach(track => track.stop());
+    micPermissionGranted = true;
+    return true;
+  } catch (error) {
+    console.error('Microphone permission error:', error);
+    return false;
+  }
 };
