@@ -19,7 +19,7 @@ const LoadingScreen = memo(({ progress }: { progress: number }) => (
     <div className="text-center">
       {/* Logo/Title */}
       <h1 className="text-4xl font-bold text-white mb-2 tracking-wider">Kalibrate</h1>
-      <p className="text-neutral-400 text-sm mb-8">Kingston Service Locator</p>
+      <p className="text-neutral-400 text-sm mb-8">Accessible Services Navigator</p>
       
       {/* Loading bar - GPU accelerated */}
       <div className="w-64 h-1 bg-neutral-800 rounded-full overflow-hidden">

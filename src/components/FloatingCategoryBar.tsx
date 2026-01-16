@@ -37,7 +37,7 @@ const QUICK_CATEGORIES: QuickCategory[] = [
   },
   {
     id: 'entertainment',
-    label: 'Things to do',
+    label: 'Arts & Entertainment',
     icon: (
       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
         <path d="M18 3v2h-2V3H8v2H6V3H4v18h2v-2h2v2h8v-2h2v2h2V3h-2zM8 17H6v-2h2v2zm0-4H6v-2h2v2zm0-4H6V7h2v2zm10 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2z"/>
@@ -78,7 +78,7 @@ const FloatingCategoryBar = memo(({
   return (
     <div 
       className="absolute top-4 z-20 flex items-center gap-3 overflow-x-auto scrollbar-hide"
-      style={{ left: `${sidebarWidth + 16}px`, right: '16px' }}
+      style={{ left: `${sidebarWidth + 16}px`, right: '70px' }}
     >
       {QUICK_CATEGORIES.map((category) => {
         const isSelected = selectedCategories.includes(category.id);

@@ -6,6 +6,7 @@
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
   }
   
   .scrollbar-hide {
@@ -28,7 +29,7 @@
   }
   
   .scrollbar-track-transparent::-webkit-scrollbar-track {
-    background-color: transparent;
+    background: transparent !important;
   }
   
   .hover\:scrollbar-thumb-white\/20:hover::-webkit-scrollbar-thumb {
@@ -37,6 +38,15 @@
   
   ::-webkit-scrollbar {
     width: 6px;
+    background: transparent !important;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: transparent !important;
+  }
+  
+  ::-webkit-scrollbar-corner {
+    background: transparent !important;
   }
 }
 
@@ -155,7 +165,8 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
   border-radius: 12px !important;
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
-  overflow: hidden;
+  z-index: 30 !important;
+  position: relative !important;
 }
 
 .mapboxgl-ctrl-group button {
@@ -163,6 +174,7 @@ body {
   border: none !important;
   width: 36px !important;
   height: 36px !important;
+  cursor: pointer !important;
 }
 
 .mapboxgl-ctrl-group button + button {
@@ -171,6 +183,13 @@ body {
 
 .mapboxgl-ctrl-group button:hover {
   background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Ensure all buttons are clickable */
+.mapboxgl-ctrl-group button:first-child,
+.mapboxgl-ctrl-zoom-in {
+  pointer-events: auto !important;
+  cursor: pointer !important;
 }
 
 .mapboxgl-ctrl-group button:focus {
