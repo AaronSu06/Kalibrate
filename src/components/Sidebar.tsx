@@ -27,10 +27,8 @@ const SidebarComponent = ({
         aria-label="Service categories and filters"
       >
         {selectedService ? (
-          /* Service Detail View */
           <ServiceDetail service={selectedService} onBack={onServiceClose} />
         ) : (
-          /* Categories View */
           <>
             {/* Header - Fixed */}
             <div className="relative px-6 py-5 flex-shrink-0">

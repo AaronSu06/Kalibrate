@@ -61,7 +61,6 @@ function App() {
   const handleServiceSelect = useCallback((service: ServiceLocation) => {
     setSelectedService(service);
   }, []);
-
   return (
     <div 
       ref={containerRef}
