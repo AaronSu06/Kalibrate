@@ -54,7 +54,7 @@ function App() {
     setIsResizing(false);
   }, []);
 
-  const handleResizeKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+  const handleResizeKeyDown = useCallback((event: React.KeyboardEvent<HTMLButtonElement>) => {
     const step = event.shiftKey ? 40 : 20;
     if (event.key === 'ArrowLeft') {
       event.preventDefault();
