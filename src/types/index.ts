@@ -13,6 +13,7 @@ export interface ServiceLocation {
   website?: string;
   hours?: string;
   accessibilityFeatures?: AccessibilityFeature[];
+  details?: Record<string, unknown>;
 }
 
 export type ServiceCategory =
@@ -109,6 +110,8 @@ export interface SidebarProps {
   selectedCategories: ServiceCategory[];
   onCategoryToggle: (category: ServiceCategory) => void;
   onVoiceAssistantOpen: () => void;
+  selectedService?: ServiceLocation;
+  onServiceClose: () => void;
 }
 
 export interface ChatbotModalProps {

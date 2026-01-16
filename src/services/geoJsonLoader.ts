@@ -28,6 +28,7 @@ function parseServices(data: KingstonServicesData): ServiceLocation[] {
         address: item.address || '',
         coordinates: { latitude, longitude },
         description: item.type || '',
+        details: item.details && Object.keys(item.details).length > 0 ? item.details : undefined,
       });
     }
   }
