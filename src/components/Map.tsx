@@ -276,13 +276,18 @@ const MapComponent = ({
     const updateRoute = () => {
       if (!map.current) return;
       const mapInstance = map.current;
-      const hasRoute = Boolean(
-        travelFrom &&
-          travelTo &&
-          travelRoute &&
-          travelRoute.coordinates &&
-          travelRoute.coordinates.length > 1
-      );
+      const fallbackCoordinates =
+        travelFrom && travelTo
+          ? [
+              [travelFrom.coordinates.longitude, travelFrom.coordinates.latitude],
+              [travelTo.coordinates.longitude, travelTo.coordinates.latitude],
+            ]
+          : null;
+      const lineCoordinates =
+        travelRoute?.coordinates && travelRoute.coordinates.length > 1
+          ? travelRoute.coordinates
+          : fallbackCoordinates;
+      const hasRoute = Boolean(lineCoordinates && lineCoordinates.length > 1);
 
       if (!hasRoute) {
         if (mapInstance.getLayer('travel-route-line')) {
@@ -297,7 +302,6 @@ const MapComponent = ({
         return;
       }
 
-      const lineCoordinates = travelRoute!.coordinates;
       const routeGeojson: GeoJSON.FeatureCollection = {
         type: 'FeatureCollection',
         features: [
