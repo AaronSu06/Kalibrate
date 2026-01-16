@@ -284,9 +284,9 @@ const MapComponent = ({
             ]
           : null;
       const lineCoordinates =
-        travelRoute?.coordinates && travelRoute.coordinates.length > 1
+        (travelRoute?.coordinates && travelRoute.coordinates.length > 1
           ? travelRoute.coordinates
-          : fallbackCoordinates;
+          : fallbackCoordinates) ?? [];
       const hasRoute = Boolean(lineCoordinates && lineCoordinates.length > 1);
 
       if (!hasRoute) {

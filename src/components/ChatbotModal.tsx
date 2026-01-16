@@ -158,7 +158,7 @@ const findBestServiceMatch = (
   const normalizedInput = normalizeText(input);
   if (!normalizedInput) return null;
 
-  let bestDirect: ServiceIndexEntry | null = null;
+  let bestDirect: ServiceLocation | null = null;
   let bestDirectLength = 0;
   index.forEach(entry => {
     if (
@@ -166,16 +166,16 @@ const findBestServiceMatch = (
       normalizedInput.includes(entry.normalizedName) &&
       entry.normalizedName.length > bestDirectLength
     ) {
-      bestDirect = entry;
+      bestDirect = entry.service;
       bestDirectLength = entry.normalizedName.length;
     }
   });
-  if (bestDirect) return bestDirect.service;
+  if (bestDirect) return bestDirect;
 
   const inputTokens = new Set(tokenize(input));
   if (inputTokens.size === 0) return null;
 
-  let best: ServiceIndexEntry | null = null;
+  let best: ServiceLocation | null = null;
   let bestScore = 0;
   let bestAddressMatches = 0;
   let bestNameLength = 0;
@@ -207,14 +207,14 @@ const findBestServiceMatch = (
         addressMatches === bestAddressMatches &&
         entry.normalizedName.length > bestNameLength)
     ) {
-      best = entry;
+      best = entry.service;
       bestScore = score;
       bestAddressMatches = addressMatches;
       bestNameLength = entry.normalizedName.length;
     }
   });
 
-  return best ? best.service : null;
+  return best;
 };
 
 export const ChatbotModal = ({

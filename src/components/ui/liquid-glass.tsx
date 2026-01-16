@@ -20,12 +20,12 @@ export const LiquidGlassCard = ({
   onMouseMove,
   ...props
 }: LiquidGlassCardProps) => {
-  let mouseX = useMotionValue(0);
-  let mouseY = useMotionValue(0);
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
 
   const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
     const { currentTarget, clientX, clientY } = event;
-    let { left, top } = currentTarget.getBoundingClientRect();
+    const { left, top } = currentTarget.getBoundingClientRect();
     mouseX.set(clientX - left);
     mouseY.set(clientY - top);
     onMouseMove?.(event);

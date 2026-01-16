@@ -40,7 +40,7 @@ function App() {
     setIsResizing(true);
   }, []);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+  const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isResizing) return;
     
     const newWidth = e.clientX;
@@ -52,6 +52,17 @@ function App() {
 
   const handleMouseUp = useCallback(() => {
     setIsResizing(false);
+  }, []);
+
+  const handleResizeKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = event.shiftKey ? 40 : 20;
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      setSidebarWidth(prev => Math.max(300, prev - step));
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      setSidebarWidth(prev => Math.min(560, prev + step));
+    }
   }, []);
 
   const handleChatbotOpen = useCallback(() => {
@@ -133,13 +144,24 @@ function App() {
       controller.abort();
     };
   }, [travelFrom, travelTo]);
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('mouseleave', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mouseleave', handleMouseUp);
+    };
+  }, [handleMouseMove, handleMouseUp, isResizing]);
   return (
     <div 
       ref={containerRef}
       className={`h-screen relative overflow-hidden ${isResizing ? 'select-none' : ''}`}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
     >
       {/* Map - Full screen background */}
       <div className="absolute inset-0">
@@ -190,12 +212,15 @@ function App() {
         </ErrorBoundary>
         
         {/* Resize Handle */}
-        <div
+        <button
+          type="button"
           className="absolute top-0 right-0 w-1 h-full bg-neutral-800 hover:bg-neutral-600 cursor-col-resize transition-colors group z-20"
           onMouseDown={handleMouseDown}
+          onKeyDown={handleResizeKeyDown}
+          aria-label="Resize sidebar"
         >
           <div className="absolute top-1/2 right-0 -translate-y-1/2 w-1 h-16 bg-neutral-600 opacity-0 group-hover:opacity-100 transition-opacity" />
-        </div>
+        </button>
       </div>
 
       {/* Chatbot Modal */}

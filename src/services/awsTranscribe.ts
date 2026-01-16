@@ -7,14 +7,26 @@ type BrowserSpeechRecognition = {
   lang: string;
   continuous: boolean;
   interimResults: boolean;
-  onresult: ((event: any) => void) | null;
-  onerror: ((event: any) => void) | null;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
   onend: (() => void) | null;
   start: () => void;
   stop: () => void;
 };
 
 type BrowserSpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
+
+type SpeechRecognitionEventLike = {
+  resultIndex: number;
+  results: ArrayLike<{
+    isFinal: boolean;
+    0?: { transcript?: string };
+  }>;
+};
+
+type SpeechRecognitionErrorEventLike = {
+  error?: string;
+};
 
 const getSpeechRecognitionClass = (): BrowserSpeechRecognitionConstructor | null => {
   if (typeof window === 'undefined') return null;
