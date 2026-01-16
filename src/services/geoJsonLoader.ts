@@ -1,91 +1,40 @@
-import type { ServiceLocation } from '@/types';
-import { mapFoodTypeToCategory, mapPOITypeToCategory } from './categoryMapping';
+import type { ServiceLocation, ServiceCategory } from '@/types';
 
-// Import GeoJSON files (stored as .json for Vite compatibility)
-import FoodData from '@/data/Food.json';
-import POIData from '@/data/PointsOfinterest.json';
+// Import the new categorized services data
+import KingstonServices from '@/data/kingston_services.json';
 
-interface GeoJSONCollection {
-  type: 'FeatureCollection';
-  features: Array<{
-    type: 'Feature';
-    geometry: {
-      type: 'Point';
-      coordinates: [number, number];
-    };
-    properties: Record<string, unknown>;
-  }>;
+interface RawService {
+  id: string;
+  name: string;
+  address: string;
+  coordinates: [number, number]; // [longitude, latitude]
+  type: string;
+  details: Record<string, unknown>;
 }
 
-function generateId(prefix: string, objectId: number): string {
-  return `${prefix}-${objectId}`;
-}
+type KingstonServicesData = Record<string, RawService[]>;
 
-function parseFoodFeatures(data: GeoJSONCollection): ServiceLocation[] {
+function parseServices(data: KingstonServicesData): ServiceLocation[] {
   const services: ServiceLocation[] = [];
-  const features = data.features;
-  const len = features.length;
 
-  for (let i = 0; i < len; i++) {
-    const feature = features[i];
-    const props = feature.properties;
-    const userType = props.USER_Type as string | undefined;
-    const category = mapFoodTypeToCategory(userType);
+  for (const [category, items] of Object.entries(data)) {
+    for (const item of items) {
+      const [longitude, latitude] = item.coordinates;
 
-    if (!category) continue; // Skip unmapped types
-
-    const coords = feature.geometry.coordinates;
-
-    services.push({
-      id: generateId('food', props.OBJECTID as number),
-      name:
-        (props.USER_Community_Food_Resource_Na as string) ||
-        'Unknown Food Resource',
-      category,
-      address: (props.USER_Address as string) || '',
-      coordinates: { latitude: coords[1], longitude: coords[0] },
-      description: `${userType} - ${(props.USER_Affordability as string) || 'Contact for pricing'}`,
-      website: props.USER_More_information as string | undefined,
-    });
-  }
-
-  return services;
-}
-
-function parsePOIFeatures(data: GeoJSONCollection): ServiceLocation[] {
-  const services: ServiceLocation[] = [];
-  const features = data.features;
-  const len = features.length;
-
-  for (let i = 0; i < len; i++) {
-    const feature = features[i];
-    const props = feature.properties;
-    const poiTypeDesc = props.POI_TYPE_DESC as string | undefined;
-    const category = mapPOITypeToCategory(poiTypeDesc);
-
-    if (!category) continue; // Skip unmapped types
-
-    const coords = feature.geometry.coordinates;
-
-    services.push({
-      id: generateId('poi', props.OBJECTID as number),
-      name:
-        (props.POI_NAME as string) ||
-        (props.MAP_LABEL as string) ||
-        'Unknown Location',
-      category,
-      address: (props.ADDRESS as string) || '',
-      coordinates: { latitude: coords[1], longitude: coords[0] },
-      description: (props.SUB_DESCRIPTION as string) || poiTypeDesc || '',
-      website: props.URL as string | undefined,
-    });
+      services.push({
+        id: item.id,
+        name: item.name || 'Unknown Location',
+        category: category as ServiceCategory,
+        address: item.address || '',
+        coordinates: { latitude, longitude },
+        description: item.type || '',
+      });
+    }
   }
 
   return services;
 }
 
 export function loadAllServicesSync(): ServiceLocation[] {
-  const foodServices = parseFoodFeatures(FoodData as unknown as GeoJSONCollection);
-  const poiServices = parsePOIFeatures(POIData as unknown as GeoJSONCollection);
-  return [...foodServices, ...poiServices];
+  return parseServices(KingstonServices as unknown as KingstonServicesData);
 }

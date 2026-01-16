@@ -8,7 +8,6 @@ import {
   addServiceLabels,
   flyToLocation,
   enable3DBuildings,
-  highlightServiceBuildings,
 } from '@/services/mapService';
 import type * as mapboxgl from 'mapbox-gl';
 
