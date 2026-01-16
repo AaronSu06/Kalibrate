@@ -45,6 +45,10 @@ function App() {
     setIsChatbotOpen(false);
   }, []);
 
+  const handleServiceClose = useCallback(() => {
+    setSelectedService(undefined);
+  }, []);
+
   return (
     <div 
       ref={containerRef}
@@ -78,6 +82,8 @@ function App() {
             selectedCategories={filterState.selectedCategories}
             onCategoryToggle={toggleCategory}
             onVoiceAssistantOpen={handleChatbotOpen}
+            selectedService={selectedService}
+            onServiceClose={handleServiceClose}
           />
         </ErrorBoundary>
         
