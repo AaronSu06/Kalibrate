@@ -44,12 +44,11 @@ export const createMap = (
     trackResize: false, // Disable resize tracking
     refreshExpiredTiles: false,
     maxTileCacheSize: 10, // Minimal tile cache (was 50)
-    localIdeographFontFamily: false,
+    localIdeographFontFamily: '',
     collectResourceTiming: false,
     crossSourceCollisions: false,
     preserveDrawingBuffer: false,
     renderWorldCopies: false,
-    pixelRatio: 1, // Force 1x pixel ratio (huge memory savings on retina)
   });
 
   // Add navigation controls (zoom, rotate, pitch)

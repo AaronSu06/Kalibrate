@@ -138,7 +138,7 @@ const MapComponent = ({
             requestAnimationFrame(() => setLoadingProgress(80));
             
             // Add labels and markers in parallel for faster loading
-            const [, markersResult] = await Promise.all([
+            await Promise.all([
               Promise.resolve(addServiceLabels(map.current, servicesRef.current)),
               addServiceMarkers(map.current, servicesRef.current)
             ]);

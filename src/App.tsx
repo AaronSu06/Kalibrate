@@ -75,6 +75,14 @@ function App() {
     setResetViewSignal((value) => value + 1);
   }, []);
 
+  // Handler for chatbot service selection by ID
+  const handleChatbotServiceSelect = useCallback((serviceId: string) => {
+    const service = KINGSTON_SERVICES.find(s => s.id === serviceId);
+    if (service) {
+      setSelectedService(service);
+    }
+  }, []);
+
   const handleTravelChange = useCallback(
     (from: ServiceLocation | null, to: ServiceLocation | null) => {
       setTravelFrom(from);
@@ -196,6 +204,7 @@ function App() {
         onClose={handleChatbotClose}
         services={filteredServices}
         sidebarWidth={sidebarWidth}
+        onServiceSelect={handleChatbotServiceSelect}
       />
     </div>
   );

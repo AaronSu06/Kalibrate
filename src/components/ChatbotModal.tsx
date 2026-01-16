@@ -9,6 +9,7 @@ export const ChatbotModal = ({
   isOpen,
   onClose,
   sidebarWidth,
+  onServiceSelect,
 }: ChatbotModalProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -72,6 +73,11 @@ export const ChatbotModal = ({
       const response = await lexService.sendMessage(text.trim());
       const botMessage = lexService.lexResponseToChatMessage(response);
       setMessages(prev => [...prev, botMessage]);
+
+      // If response includes a serviceId, trigger service selection
+      if (response.serviceId && onServiceSelect) {
+        onServiceSelect(response.serviceId);
+      }
     } catch (error) {
       const errorMessage: ChatMessage = {
         id: `error-${Date.now()}`,

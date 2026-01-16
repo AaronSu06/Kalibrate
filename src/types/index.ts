@@ -137,6 +137,7 @@ export interface ChatbotModalProps {
   onClose: () => void;
   services: ServiceLocation[];
   sidebarWidth: number;
+  onServiceSelect?: (serviceId: string) => void;
 }
 
 export interface CategoryListProps {
