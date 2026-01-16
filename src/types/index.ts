@@ -16,23 +16,39 @@ export interface ServiceLocation {
 }
 
 export type ServiceCategory =
-  | 'healthcare'
+  | 'hospitals'
+  | 'clinics'
   | 'grocery'
-  | 'banking'
-  | 'pharmacy'
   | 'transportation'
-  | 'community'
-  | 'recreation';
+  | 'religious'
+  | 'gardens'
+  | 'entertainment'
+  | 'education'
+  | 'government'
+  | 'emergency'
+  | 'housing'
+  | 'fitness'
+  | 'banks'
+  | 'libraries'
+  | 'daycare';
 
 // Category colors for map visualization (bright neon colors)
 export const CATEGORY_COLORS: Record<ServiceCategory, string> = {
-  healthcare: '#FF3366',
+  hospitals: '#FF3366',
+  clinics: '#BF00FF',
   grocery: '#39FF14',
-  banking: '#00BFFF',
-  pharmacy: '#BF00FF',
   transportation: '#FFFF00',
-  community: '#00FFFF',
-  recreation: '#FF69B4',
+  religious: '#E6E6FA',
+  gardens: '#32CD32',
+  entertainment: '#FF69B4',
+  education: '#00BFFF',
+  government: '#FFB347',
+  emergency: '#FF4500',
+  housing: '#FF8C00',
+  fitness: '#00FF7F',
+  banks: '#00CED1',
+  libraries: '#9370DB',
+  daycare: '#FFB6C1',
 };
 
 export type AccessibilityFeature =

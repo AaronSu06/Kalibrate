@@ -31,36 +31,72 @@ export const sendMessage = async (text: string): Promise<LexResponse> => {
     };
   }
 
-  if (lowerText.includes('hospital') || lowerText.includes('doctor') || lowerText.includes('health')) {
+  if (lowerText.includes('hospital')) {
     return {
       message:
-        "The nearest hospital is Kingston General Hospital at 76 Stuart Street. It's open 24/7 and is wheelchair accessible. Would you like me to show it on the map?",
+        "The nearest hospital is Kingston General Hospital at 76 Stuart Street. It's open 24/7. Would you like me to show it on the map?",
       intent: 'FindService',
-      slots: { category: 'healthcare' },
+      slots: { category: 'hospitals' },
     };
   }
 
-  if (lowerText.includes('bank')) {
+  if (lowerText.includes('pharmacy') || lowerText.includes('drugstore') || lowerText.includes('clinic') || lowerText.includes('doctor')) {
     return {
       message:
-        "I found 2 banks nearby: RBC Royal Bank on Princess Street and TD Canada Trust on Bath Road. Both are wheelchair accessible. Which one would you prefer?",
+        "I found several clinics and pharmacies nearby. Would you like me to show them on the map?",
       intent: 'FindService',
-      slots: { category: 'banking' },
+      slots: { category: 'clinics' },
     };
   }
 
-  if (lowerText.includes('pharmacy') || lowerText.includes('drugstore')) {
+  if (lowerText.includes('school') || lowerText.includes('university') || lowerText.includes('college')) {
     return {
       message:
-        "Shoppers Drug Mart on Princess Street is the nearest pharmacy. It's open Mon-Sun 8am-10pm and is wheelchair accessible.",
+        "I found several education facilities nearby including Queen's University and St. Lawrence College. Would you like me to show them on the map?",
       intent: 'FindService',
-      slots: { category: 'pharmacy' },
+      slots: { category: 'education' },
+    };
+  }
+
+  if (lowerText.includes('bank') || lowerText.includes('atm')) {
+    return {
+      message:
+        "I found several banks and ATMs nearby. Would you like me to show them on the map?",
+      intent: 'FindService',
+      slots: { category: 'banks' },
+    };
+  }
+
+  if (lowerText.includes('library') || lowerText.includes('libraries')) {
+    return {
+      message:
+        "I found several libraries nearby including the Kingston Frontenac Library. Would you like me to show them on the map?",
+      intent: 'FindService',
+      slots: { category: 'libraries' },
+    };
+  }
+
+  if (lowerText.includes('daycare') || lowerText.includes('childcare') || lowerText.includes('child care')) {
+    return {
+      message:
+        "I found several daycare facilities nearby. Would you like me to show them on the map?",
+      intent: 'FindService',
+      slots: { category: 'daycare' },
+    };
+  }
+
+  if (lowerText.includes('park') || lowerText.includes('garden')) {
+    return {
+      message:
+        "I found several parks and gardens nearby. Would you like me to show them on the map?",
+      intent: 'FindService',
+      slots: { category: 'gardens' },
     };
   }
 
   return {
     message:
-      "I can help you find healthcare facilities, grocery stores, banks, and pharmacies in Kingston. What are you looking for?",
+      "I can help you find hospitals, clinics, grocery stores, banks, libraries, daycare, parks, and more in Kingston. What are you looking for?",
     intent: 'Welcome',
   };
 };
