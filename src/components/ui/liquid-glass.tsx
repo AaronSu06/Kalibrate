@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { motion, useMotionTemplate, useMotionValue } from "motion/react";
+import { motion, useMotionTemplate, useMotionValue } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 type LiquidGlassCardProps = React.HTMLAttributes<HTMLDivElement> & {

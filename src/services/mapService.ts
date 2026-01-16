@@ -45,40 +45,39 @@ export const createMap = (
   return map;
 };
 
-// Store service locations
+// Store service locations and highlighted service IDs
 let currentServices: ServiceLocation[] = [];
+let highlightedServiceIds: Set<string> = new Set();
 
-// Add service locations as markers on the map
+// Add service locations with glowing markers and labels
 export const addServiceMarkers = (
   map: mapboxgl.Map,
-  services: ServiceLocation[]
+  services: ServiceLocation[],
+  excludeIds: Set<string> = new Set()
 ): void => {
   currentServices = services;
 
-  // Remove existing layers and source
-  if (map.getLayer('service-labels')) {
-    map.removeLayer('service-labels');
-  }
-  if (map.getLayer('service-circles')) {
-    map.removeLayer('service-circles');
-  }
-  if (map.getLayer('service-circles-glow')) {
-    map.removeLayer('service-circles-glow');
-  }
-  if (map.getLayer('service-circles-glow-outer')) {
-    map.removeLayer('service-circles-glow-outer');
-  }
-  if (map.getLayer('service-circles-glow-outer2')) {
-    map.removeLayer('service-circles-glow-outer2');
-  }
-  if (map.getSource('services')) {
-    map.removeSource('services');
+  // Remove existing marker layers and source (not labels)
+  const markerLayersToRemove = [
+    'service-markers-glow-outer',
+    'service-markers-glow',
+    'service-markers-core',
+    'service-markers-base',
+  ];
+  markerLayersToRemove.forEach(layerId => {
+    if (map.getLayer(layerId)) map.removeLayer(layerId);
+  });
+  if (map.getSource('services-markers')) {
+    map.removeSource('services-markers');
   }
 
-  // Create GeoJSON from services
-  const geojson: GeoJSON.FeatureCollection = {
+  // Filter out services that have building highlights (for markers only)
+  const visibleServices = services.filter(s => !excludeIds.has(s.id));
+
+  // Create GeoJSON for markers (filtered)
+  const markersGeojson: GeoJSON.FeatureCollection = {
     type: 'FeatureCollection',
-    features: services.map(service => ({
+    features: visibleServices.map(service => ({
       type: 'Feature',
       geometry: {
         type: 'Point',
@@ -93,51 +92,151 @@ export const addServiceMarkers = (
     })),
   };
 
-  // Add the GeoJSON source
-  map.addSource('services', {
+  // Add the markers source
+  map.addSource('services-markers', {
     type: 'geojson',
-    data: geojson,
+    data: markersGeojson,
   });
 
-  // Add main circle markers layer (minimal dots that scale with zoom)
+  // Outer glow layer (largest, most transparent)
   map.addLayer({
-    id: 'service-circles',
+    id: 'service-markers-glow-outer',
     type: 'circle',
-    source: 'services',
+    source: 'services-markers',
     paint: {
       'circle-radius': [
-        'interpolate',
-        ['linear'],
-        ['zoom'],
-        9, 3,
-        12, 4,
-        15, 5.5,
-        18, 7.5,
+        'interpolate', ['linear'], ['zoom'],
+        10, 15,
+        15, 22,
+        18, 30,
       ],
       'circle-color': ['get', 'color'],
-      'circle-opacity': 0.95,
-      'circle-blur': 0,
+      'circle-opacity': 0.5,
+      'circle-blur': 1,
     },
   });
 
-  // Add text labels layer (visible at higher zoom)
+  // Inner glow layer
+  map.addLayer({
+    id: 'service-markers-glow',
+    type: 'circle',
+    source: 'services-markers',
+    paint: {
+      'circle-radius': [
+        'interpolate', ['linear'], ['zoom'],
+        10, 9,
+        15, 14,
+        18, 18,
+      ],
+      'circle-color': ['get', 'color'],
+      'circle-opacity': 0.8,
+      'circle-blur': 0.3,
+    },
+  });
+
+  // White base layer for contrast
+  map.addLayer({
+    id: 'service-markers-base',
+    type: 'circle',
+    source: 'services-markers',
+    paint: {
+      'circle-radius': [
+        'interpolate', ['linear'], ['zoom'],
+        10, 6,
+        15, 8,
+        18, 11,
+      ],
+      'circle-color': '#ffffff',
+      'circle-opacity': 1,
+    },
+  });
+
+  // Bright neon core - use match expression for explicit colors
+  map.addLayer({
+    id: 'service-markers-core',
+    type: 'circle',
+    source: 'services-markers',
+    paint: {
+      'circle-radius': [
+        'interpolate', ['linear'], ['zoom'],
+        10, 5,
+        15, 7,
+        18, 10,
+      ],
+      'circle-color': [
+        'match',
+        ['get', 'category'],
+        'healthcare', '#FF3366',
+        'grocery', '#39FF14',
+        'banking', '#00BFFF',
+        'pharmacy', '#BF00FF',
+        'transportation', '#FFFF00',
+        'community', '#00FFFF',
+        'recreation', '#FF69B4',
+        '#39FF14' // default
+      ],
+      'circle-opacity': 1,
+    },
+  });
+};
+
+// Add labels separately (always shows all services)
+export const addServiceLabels = (
+  map: mapboxgl.Map,
+  services: ServiceLocation[]
+): void => {
+  // Remove existing labels
+  if (map.getLayer('service-labels')) {
+    map.removeLayer('service-labels');
+  }
+  if (map.getSource('services-labels')) {
+    map.removeSource('services-labels');
+  }
+
+  // Create GeoJSON for all services (labels always visible)
+  const labelsGeojson: GeoJSON.FeatureCollection = {
+    type: 'FeatureCollection',
+    features: services.map(service => ({
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: [service.coordinates.longitude, service.coordinates.latitude],
+      },
+      properties: {
+        id: service.id,
+        name: service.name,
+        category: service.category,
+      },
+    })),
+  };
+
+  map.addSource('services-labels', {
+    type: 'geojson',
+    data: labelsGeojson,
+  });
+
+  // Text labels (always visible for all services)
   map.addLayer({
     id: 'service-labels',
     type: 'symbol',
-    source: 'services',
-    minzoom: 15,
+    source: 'services-labels',
     layout: {
       'text-field': ['get', 'name'],
-      'text-size': 11,
-      'text-offset': [0, 1.2],
+      'text-size': [
+        'interpolate', ['linear'], ['zoom'],
+        10, 9,
+        15, 11,
+        18, 13,
+      ],
+      'text-offset': [0, 1.8],
       'text-anchor': 'top',
       'text-max-width': 10,
       'text-allow-overlap': false,
     },
     paint: {
-      'text-color': '#333333',
-      'text-halo-color': '#ffffff',
-      'text-halo-width': 1.5,
+      'text-color': '#ffffff',
+      'text-halo-color': 'rgba(0, 0, 0, 0.9)',
+      'text-halo-width': 2,
     },
   });
 };
@@ -167,24 +266,28 @@ export const enable3DBuildings = (map: mapboxgl.Map): void => {
     return;
   }
 
-  const style = map.getStyle();
-  const styleSources = style?.sources ?? {};
-  if (!('composite' in styleSources)) {
-    console.warn('Composite source not found in map style');
-    return;
+  // Add mapbox-streets source if composite doesn't exist
+  // This provides building footprint data
+  if (!map.getSource('composite') && !map.getSource('mapbox-streets')) {
+    map.addSource('mapbox-streets', {
+      type: 'vector',
+      url: 'mapbox://mapbox.mapbox-streets-v8',
+    });
   }
 
+  const buildingSource = map.getSource('composite') ? 'composite' : 'mapbox-streets';
+
+  const style = map.getStyle();
   const labelLayerId = style?.layers?.find(layer => {
     const layout = layer.layout as { 'text-field'?: unknown } | undefined;
     return layer.type === 'symbol' && layout?.['text-field'];
   })?.id;
 
-  // Add 3D building extrusions with default gray color
-  // Colors will be updated by highlightServiceBuildings
+  // Add 3D building extrusions
   map.addLayer(
     {
       id: '3d-buildings',
-      source: 'composite',
+      source: buildingSource,
       'source-layer': 'building',
       filter: ['==', 'extrude', 'true'],
       type: 'fill-extrusion',
@@ -215,6 +318,8 @@ export const enable3DBuildings = (map: mapboxgl.Map): void => {
     },
     labelLayerId
   );
+
+  console.log('3D buildings layer added using source:', buildingSource);
 };
 
 
@@ -237,34 +342,77 @@ const queryBuildingAtPoint = (
   lat: number
 ): mapboxgl.MapboxGeoJSONFeature | null => {
   const point = map.project([lng, lat]);
+  // Query a small area first for precision
+  const preciseFeatures = map.queryRenderedFeatures(
+    [
+      [point.x - 5, point.y - 5],
+      [point.x + 5, point.y + 5],
+    ],
+    { layers: ['3d-buildings'] }
+  );
+
+  // If found with precise query, use that
+  if (preciseFeatures.length > 0) {
+    return preciseFeatures[0];
+  }
+
+  // Fall back to slightly larger area if nothing found
   const features = map.queryRenderedFeatures(
     [
-      [point.x - 10, point.y - 10],
-      [point.x + 10, point.y + 10],
+      [point.x - 15, point.y - 15],
+      [point.x + 15, point.y + 15],
     ],
     { layers: ['3d-buildings'] }
   );
   return features.length > 0 ? features[0] : null;
 };
 
-// Highlight buildings at service locations by extracting their footprints
+// Highlight buildings at service locations with neon glow effect
 export const highlightServiceBuildings = (
   map: mapboxgl.Map,
   services: ServiceLocation[]
 ): void => {
-  // Remove existing highlight layer
-  if (map.getLayer('highlighted-buildings')) {
-    map.removeLayer('highlighted-buildings');
-  }
+  // Remove existing highlight layers
+  const layersToRemove = [
+    'highlighted-buildings',
+    'highlighted-buildings-glow',
+    'highlighted-buildings-glow-outer',
+  ];
+  layersToRemove.forEach(layerId => {
+    if (map.getLayer(layerId)) map.removeLayer(layerId);
+  });
   if (map.getSource('highlighted-buildings-source')) {
     map.removeSource('highlighted-buildings-source');
   }
 
-  if (!map.getLayer('3d-buildings')) return;
+  // Clear highlighted IDs and refresh markers if below threshold
+  const zoom = map.getZoom();
+  if (zoom < 17) {
+    // Below threshold - clear highlights and show all markers
+    if (highlightedServiceIds.size > 0) {
+      highlightedServiceIds.clear();
+      addServiceMarkers(map, services, highlightedServiceIds);
+    }
+    console.log('Zoom level too low for precise building highlights:', zoom);
+    return;
+  }
+
+  // Ensure 3D buildings layer exists before querying
+  if (!map.getLayer('3d-buildings')) {
+    console.log('3d-buildings layer not found, adding it now...');
+    enable3DBuildings(map);
+
+    // If still doesn't exist after trying to add, return
+    if (!map.getLayer('3d-buildings')) {
+      console.log('Could not add 3d-buildings layer');
+      return;
+    }
+  }
 
   // Query buildings at each service location and collect their geometries
   const buildingFeatures: GeoJSON.Feature[] = [];
   const processedIds = new Set<string | number>();
+  const newHighlightedIds = new Set<string>();
 
   for (const service of services) {
     const building = queryBuildingAtPoint(
@@ -273,23 +421,33 @@ export const highlightServiceBuildings = (
       service.coordinates.latitude
     );
 
-    if (building && building.geometry && building.geometry.type === 'Polygon') {
+    if (building && building.geometry &&
+        (building.geometry.type === 'Polygon' || building.geometry.type === 'MultiPolygon')) {
       // Avoid duplicates
       const id = building.id ?? `${service.coordinates.longitude}-${service.coordinates.latitude}`;
       if (processedIds.has(id)) continue;
       processedIds.add(id);
 
+      // Track this service as highlighted
+      newHighlightedIds.add(service.id);
+
       buildingFeatures.push({
         type: 'Feature',
-        geometry: building.geometry as GeoJSON.Polygon,
+        geometry: building.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon,
         properties: {
           color: CATEGORY_COLORS[service.category],
-          height: building.properties?.height ?? 15,
+          height: building.properties?.height ?? 20,
           min_height: building.properties?.min_height ?? 0,
         },
       });
     }
   }
+
+  console.log('Found', buildingFeatures.length, 'buildings to highlight');
+
+  // Update highlighted IDs and refresh markers to hide those with buildings
+  highlightedServiceIds = newHighlightedIds;
+  addServiceMarkers(map, services, highlightedServiceIds);
 
   if (buildingFeatures.length === 0) return;
 
@@ -302,7 +460,31 @@ export const highlightServiceBuildings = (
     },
   });
 
-  // Add highlighted buildings layer on top of regular buildings
+  // Outer glow layer (2D fill at ground level)
+  map.addLayer({
+    id: 'highlighted-buildings-glow-outer',
+    type: 'fill',
+    source: 'highlighted-buildings-source',
+    paint: {
+      'fill-color': ['get', 'color'],
+      'fill-opacity': 0.4,
+    },
+  });
+
+  // Inner glow - slightly extruded with high opacity
+  map.addLayer({
+    id: 'highlighted-buildings-glow',
+    type: 'fill-extrusion',
+    source: 'highlighted-buildings-source',
+    paint: {
+      'fill-extrusion-color': ['get', 'color'],
+      'fill-extrusion-height': ['+', ['get', 'height'], 8],
+      'fill-extrusion-base': 0,
+      'fill-extrusion-opacity': 0.6,
+    },
+  });
+
+  // Main highlighted building - bright neon color
   map.addLayer({
     id: 'highlighted-buildings',
     type: 'fill-extrusion',
@@ -311,9 +493,11 @@ export const highlightServiceBuildings = (
       'fill-extrusion-color': ['get', 'color'],
       'fill-extrusion-height': ['get', 'height'],
       'fill-extrusion-base': ['get', 'min_height'],
-      'fill-extrusion-opacity': 0.9,
+      'fill-extrusion-opacity': 1,
     },
   });
+
+  console.log('Building highlights added successfully');
 };
 
 // Re-query and update building highlights when map moves

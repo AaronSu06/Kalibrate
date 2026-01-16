@@ -5,12 +5,14 @@ import {
   initializeMapbox,
   createMap,
   addServiceMarkers,
+  addServiceLabels,
   flyToLocation,
   enable3DBuildings,
   highlightServiceBuildings,
-  refreshBuildingHighlights,
 } from '@/services/mapService';
 import type * as mapboxgl from 'mapbox-gl';
+
+const BUILDING_HIGHLIGHT_ZOOM_THRESHOLD = 17;
 
 export const Map = ({
   services,
@@ -19,6 +21,7 @@ export const Map = ({
 }: MapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
+  const wasAboveThreshold = useRef<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,20 +39,28 @@ export const Map = ({
         }
       });
 
-      // Refresh building highlights when map stops moving
-      // (buildings can only be queried when rendered in viewport)
-      map.current.on('idle', () => {
-        if (map.current) {
-          refreshBuildingHighlights(map.current);
+      // Only refresh building highlights when crossing the zoom threshold
+      map.current.on('zoomend', () => {
+        if (!map.current) return;
+        const zoom = map.current.getZoom();
+        const isAboveThreshold = zoom >= BUILDING_HIGHLIGHT_ZOOM_THRESHOLD;
+
+        // Only refresh if we crossed the threshold
+        if (isAboveThreshold !== wasAboveThreshold.current) {
+          wasAboveThreshold.current = isAboveThreshold;
+          highlightServiceBuildings(map.current, services);
         }
       });
 
       map.current.on('load', () => {
         setIsLoading(false);
-        // Add service markers and building highlights on initial load
+        // Add service markers, labels, and building highlights on initial load
         if (map.current && services.length > 0) {
           try {
-            addServiceMarkers(map.current, services);
+            // Initialize threshold state
+            wasAboveThreshold.current = map.current.getZoom() >= BUILDING_HIGHLIGHT_ZOOM_THRESHOLD;
+            addServiceLabels(map.current, services); // Labels always visible
+            addServiceMarkers(map.current, services); // Markers can be hidden
             highlightServiceBuildings(map.current, services);
           } catch (err) {
             console.error('Error adding service markers:', err);
@@ -83,8 +94,9 @@ export const Map = ({
     if (!map.current || isLoading || services.length === 0) return;
 
     try {
-      // Update the GeoJSON source with new service data
-      addServiceMarkers(map.current, services);
+      // Update labels and markers with new service data
+      addServiceLabels(map.current, services); // Labels always show all
+      addServiceMarkers(map.current, services); // Markers can be filtered
       highlightServiceBuildings(map.current, services);
     } catch (err) {
       console.error('Error updating service markers:', err);
@@ -120,18 +132,23 @@ export const Map = ({
       }
     };
 
-    // Wait for layer to exist before adding handlers
-    if (map.current.getLayer('service-circles')) {
-      map.current.on('click', 'service-circles', handleClick);
-      map.current.on('mouseenter', 'service-circles', handleMouseEnter);
-      map.current.on('mouseleave', 'service-circles', handleMouseLeave);
-    }
+    // Add click handlers for markers
+    const markerLayers = ['service-markers-core', 'service-labels'];
+    markerLayers.forEach(layerId => {
+      if (map.current?.getLayer(layerId)) {
+        map.current.on('click', layerId, handleClick);
+        map.current.on('mouseenter', layerId, handleMouseEnter);
+        map.current.on('mouseleave', layerId, handleMouseLeave);
+      }
+    });
 
     return () => {
       if (map.current) {
-        map.current.off('click', 'service-circles', handleClick);
-        map.current.off('mouseenter', 'service-circles', handleMouseEnter);
-        map.current.off('mouseleave', 'service-circles', handleMouseLeave);
+        markerLayers.forEach(layerId => {
+          map.current?.off('click', layerId, handleClick);
+          map.current?.off('mouseenter', layerId, handleMouseEnter);
+          map.current?.off('mouseleave', layerId, handleMouseLeave);
+        });
       }
     };
   }, [services, isLoading, onServiceSelect]);
