@@ -104,6 +104,9 @@ export interface MapProps {
   onServiceSelect: (service: ServiceLocation) => void;
   filterState: FilterState;
   resetViewSignal?: number;
+  travelFrom?: ServiceLocation | null;
+  travelTo?: ServiceLocation | null;
+  travelRoute?: GeoJSON.LineString | null;
 }
 
 export interface SidebarProps {
@@ -115,6 +118,18 @@ export interface SidebarProps {
   selectedService?: ServiceLocation;
   onServiceClose: () => void;
   onServiceSelect?: (service: ServiceLocation) => void;
+  travelFrom?: ServiceLocation | null;
+  travelTo?: ServiceLocation | null;
+  onTravelChange?: (from: ServiceLocation | null, to: ServiceLocation | null) => void;
+  travelEstimate?: TravelEstimate | null;
+  travelLoading?: boolean;
+  travelError?: string | null;
+}
+
+export interface TravelEstimate {
+  distanceKm: number;
+  walkingMinutes: number;
+  drivingMinutes: number;
 }
 
 export interface ChatbotModalProps {

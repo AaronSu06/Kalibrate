@@ -1,9 +1,10 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import type { ServiceLocation } from '@/types';
 import { CATEGORY_COLORS } from '@/types';
 
 interface ServiceDetailProps {
   service: ServiceLocation;
+  allServices: ServiceLocation[];
   onBack: () => void;
 }
 
@@ -25,9 +26,54 @@ const CATEGORY_LABELS: Record<string, string> = {
   daycare: 'Daycare',
 };
 
-const ServiceDetailComponent = ({ service, onBack }: ServiceDetailProps) => {
+const ServiceDetailComponent = ({ service, allServices, onBack }: ServiceDetailProps) => {
   const categoryColor = CATEGORY_COLORS[service.category];
   const categoryLabel = CATEGORY_LABELS[service.category] || service.category;
+  const nearbyEstimates = useMemo(() => {
+    const toRad = (value: number) => (value * Math.PI) / 180;
+    const haversineKm = (a: ServiceLocation, b: ServiceLocation) => {
+      const earthRadiusKm = 6371;
+      const dLat = toRad(b.coordinates.latitude - a.coordinates.latitude);
+      const dLon = toRad(b.coordinates.longitude - a.coordinates.longitude);
+      const lat1 = toRad(a.coordinates.latitude);
+      const lat2 = toRad(b.coordinates.latitude);
+      const sinLat = Math.sin(dLat / 2);
+      const sinLon = Math.sin(dLon / 2);
+      const h =
+        sinLat * sinLat +
+        Math.cos(lat1) * Math.cos(lat2) * sinLon * sinLon;
+      return 2 * earthRadiusKm * Math.asin(Math.sqrt(h));
+    };
+
+    const formatMinutes = (minutes: number) => {
+      if (minutes < 1) return '<1 min';
+      if (minutes < 60) return `${Math.round(minutes)} min`;
+      let hours = Math.floor(minutes / 60);
+      let mins = Math.round(minutes % 60);
+      if (mins === 60) {
+        hours += 1;
+        mins = 0;
+      }
+      return `${hours} hr ${mins} min`;
+    };
+
+    const walkingSpeedKmh = 4.8;
+    const drivingSpeedKmh = 35;
+
+    return allServices
+      .filter((candidate) => candidate.id !== service.id)
+      .map((candidate) => {
+        const distanceKm = haversineKm(service, candidate);
+        return {
+          service: candidate,
+          distanceKm,
+          walking: formatMinutes((distanceKm / walkingSpeedKmh) * 60),
+          driving: formatMinutes((distanceKm / drivingSpeedKmh) * 60),
+        };
+      })
+      .sort((a, b) => a.distanceKm - b.distanceKm)
+      .slice(0, 5);
+  }, [allServices, service]);
 
   const renderDetailValue = (value: unknown): React.ReactNode => {
     if (Array.isArray(value)) {
@@ -140,6 +186,36 @@ const ServiceDetailComponent = ({ service, onBack }: ServiceDetailProps) => {
                     {key.replace(/_/g, ' ')}
                   </h4>
                   {renderDetailValue(value)}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Travel Estimates */}
+        {nearbyEstimates.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-sm font-medium text-white/40 uppercase tracking-wider mb-3">
+              Nearby travel estimates
+            </h3>
+            <p className="text-white/45 text-xs mb-3">
+              Rough estimates using straight-line distance.
+            </p>
+            <div className="space-y-3">
+              {nearbyEstimates.map((estimate) => (
+                <div key={estimate.service.id} className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="text-white/80 text-sm font-medium truncate">
+                      {estimate.service.name}
+                    </div>
+                    <div className="text-white/45 text-xs">
+                      {estimate.distanceKm.toFixed(1)} km away
+                    </div>
+                  </div>
+                  <div className="text-right text-xs text-white/60 whitespace-nowrap">
+                    <div>Walk: {estimate.walking}</div>
+                    <div>Drive: {estimate.driving}</div>
+                  </div>
                 </div>
               ))}
             </div>

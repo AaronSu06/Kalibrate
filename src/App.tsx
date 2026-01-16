@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo, memo } from 'react';
+import { useState, useRef, useCallback, useMemo, memo, useEffect } from 'react';
 import { Map } from './components/Map';
 import { Sidebar } from './components/Sidebar';
 import { ChatbotModal } from './components/ChatbotModal';
@@ -7,6 +7,8 @@ import { FloatingCategoryBar } from './components/FloatingCategoryBar';
 import { KINGSTON_SERVICES } from './data/services';
 import { useServiceFilter } from './hooks/useServiceFilter';
 import type { ServiceLocation } from './types';
+import type { TravelEstimate } from './types';
+import { getRoute } from './services/directionsService';
 
 // Memoize ErrorBoundary wrappers to prevent unnecessary rerenders
 const MemoizedMap = memo(Map);
@@ -17,6 +19,12 @@ function App() {
   const [selectedService, setSelectedService] = useState<
     ServiceLocation | undefined
   >();
+  const [travelFrom, setTravelFrom] = useState<ServiceLocation | null>(null);
+  const [travelTo, setTravelTo] = useState<ServiceLocation | null>(null);
+  const [travelRoute, setTravelRoute] = useState<GeoJSON.LineString | null>(null);
+  const [travelEstimate, setTravelEstimate] = useState<TravelEstimate | null>(null);
+  const [travelLoading, setTravelLoading] = useState(false);
+  const [travelError, setTravelError] = useState<string | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(420);
   const [isResizing, setIsResizing] = useState(false);
   const [resetViewSignal, setResetViewSignal] = useState(0);
@@ -66,6 +74,57 @@ function App() {
   const handleResetView = useCallback(() => {
     setResetViewSignal((value) => value + 1);
   }, []);
+
+  const handleTravelChange = useCallback(
+    (from: ServiceLocation | null, to: ServiceLocation | null) => {
+      setTravelFrom(from);
+      setTravelTo(to);
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!travelFrom || !travelTo) {
+      setTravelRoute(null);
+      setTravelEstimate(null);
+      setTravelError(null);
+      setTravelLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const loadRoutes = async () => {
+      setTravelLoading(true);
+      setTravelError(null);
+      try {
+        const [drivingRoute, walkingRoute] = await Promise.all([
+          getRoute('driving', travelFrom, travelTo, controller.signal),
+          getRoute('walking', travelFrom, travelTo, controller.signal),
+        ]);
+
+        const distanceKm =
+          (drivingRoute?.distance ?? walkingRoute?.distance ?? 0) / 1000;
+        setTravelEstimate({
+          distanceKm,
+          drivingMinutes: drivingRoute.duration / 60,
+          walkingMinutes: walkingRoute.duration / 60,
+        });
+        setTravelRoute(drivingRoute.geometry ?? walkingRoute.geometry ?? null);
+      } catch (err) {
+        if ((err as { name?: string }).name === 'AbortError') return;
+        setTravelError(err instanceof Error ? err.message : 'Failed to load directions');
+        setTravelEstimate(null);
+        setTravelRoute(null);
+      } finally {
+        setTravelLoading(false);
+      }
+    };
+
+    loadRoutes();
+    return () => {
+      controller.abort();
+    };
+  }, [travelFrom, travelTo]);
   return (
     <div 
       ref={containerRef}
@@ -83,6 +142,9 @@ function App() {
             onServiceSelect={handleServiceSelect}
             filterState={filterState}
             resetViewSignal={resetViewSignal}
+            travelFrom={travelFrom}
+            travelTo={travelTo}
+            travelRoute={travelRoute}
           />
         </ErrorBoundary>
       </div>
@@ -110,6 +172,12 @@ function App() {
             selectedService={selectedService}
             onServiceClose={handleServiceClose}
             onServiceSelect={handleServiceSelect}
+            travelFrom={travelFrom}
+            travelTo={travelTo}
+            onTravelChange={handleTravelChange}
+            travelEstimate={travelEstimate}
+            travelLoading={travelLoading}
+            travelError={travelError}
           />
         </ErrorBoundary>
         

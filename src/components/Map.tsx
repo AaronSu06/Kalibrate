@@ -9,7 +9,7 @@ import {
   flyToLocation,
   enable3DBuildings,
 } from '@/services/mapService';
-import type * as mapboxgl from 'mapbox-gl';
+import mapboxgl from 'mapbox-gl';
 
 const BUILDING_HIGHLIGHT_ZOOM_THRESHOLD = 17;
 
@@ -50,6 +50,9 @@ const MapComponent = ({
   selectedService,
   onServiceSelect,
   resetViewSignal,
+  travelFrom,
+  travelTo,
+  travelRoute,
 }: MapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -265,6 +268,120 @@ const MapComponent = ({
       flyToLocation(map.current, selectedService.coordinates);
     }
   }, [selectedService]);
+
+  // Show travel estimate line on the map
+  useEffect(() => {
+    if (!map.current) return;
+
+    const updateRoute = () => {
+      if (!map.current) return;
+      const mapInstance = map.current;
+      const hasRoute = Boolean(
+        travelFrom &&
+          travelTo &&
+          travelRoute &&
+          travelRoute.coordinates &&
+          travelRoute.coordinates.length > 1
+      );
+
+      if (!hasRoute) {
+        if (mapInstance.getLayer('travel-route-line')) {
+          mapInstance.removeLayer('travel-route-line');
+        }
+        if (mapInstance.getLayer('travel-route-points')) {
+          mapInstance.removeLayer('travel-route-points');
+        }
+        if (mapInstance.getSource('travel-route')) {
+          mapInstance.removeSource('travel-route');
+        }
+        return;
+      }
+
+      const lineCoordinates = travelRoute!.coordinates;
+      const routeGeojson: GeoJSON.FeatureCollection = {
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            geometry: {
+              type: 'LineString',
+              coordinates: lineCoordinates,
+            },
+            properties: {},
+          },
+          {
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: [travelFrom!.coordinates.longitude, travelFrom!.coordinates.latitude],
+            },
+            properties: { role: 'from' },
+          },
+          {
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: [travelTo!.coordinates.longitude, travelTo!.coordinates.latitude],
+            },
+            properties: { role: 'to' },
+          },
+        ],
+      };
+
+      if (mapInstance.getSource('travel-route')) {
+        const source = mapInstance.getSource('travel-route') as mapboxgl.GeoJSONSource;
+        source.setData(routeGeojson);
+      } else {
+        mapInstance.addSource('travel-route', {
+          type: 'geojson',
+          data: routeGeojson,
+        });
+        mapInstance.addLayer({
+          id: 'travel-route-line',
+          type: 'line',
+          source: 'travel-route',
+          filter: ['==', '$type', 'LineString'],
+          paint: {
+            'line-color': '#38bdf8',
+            'line-width': 3,
+            'line-opacity': 0.9,
+          },
+        });
+        mapInstance.addLayer({
+          id: 'travel-route-points',
+          type: 'circle',
+          source: 'travel-route',
+          filter: ['==', '$type', 'Point'],
+          paint: {
+            'circle-radius': 6,
+            'circle-color': [
+              'match',
+              ['get', 'role'],
+              'from',
+              '#22c55e',
+              'to',
+              '#f97316',
+              '#38bdf8',
+            ],
+            'circle-stroke-width': 2,
+            'circle-stroke-color': '#ffffff',
+          },
+        });
+      }
+
+      const bounds = new mapboxgl.LngLatBounds();
+      lineCoordinates.forEach((coordinate) =>
+        bounds.extend(coordinate as [number, number])
+      );
+      mapInstance.fitBounds(bounds, { padding: 120, duration: 800 });
+    };
+
+    if (map.current.loaded()) {
+      updateRoute();
+    } else {
+      map.current.once('load', updateRoute);
+    }
+  }, [travelFrom, travelTo, travelRoute]);
 
   // Reset map view when requested by parent
   useEffect(() => {
