@@ -202,7 +202,7 @@ function App() {
       <ChatbotModal
         isOpen={isChatbotOpen}
         onClose={handleChatbotClose}
-        services={filteredServices}
+        services={KINGSTON_SERVICES}
         sidebarWidth={sidebarWidth}
         onServiceSelect={handleChatbotServiceSelect}
       />

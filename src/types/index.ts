@@ -83,6 +83,14 @@ export interface ChatMessage {
   text: string;
   sender: 'user' | 'bot';
   timestamp: Date;
+  actions?: ChatAction[];
+}
+
+export interface ChatAction {
+  id: string;
+  label: string;
+  kind: 'show_on_map' | 'show_details';
+  serviceId: string;
 }
 
 export interface VoiceInputState {
