@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, memo } from 'react';
 import type { MapProps } from '@/types';
 import { KINGSTON_CENTER } from '@/types';
 import {
@@ -14,7 +14,7 @@ import type * as mapboxgl from 'mapbox-gl';
 
 const BUILDING_HIGHLIGHT_ZOOM_THRESHOLD = 17;
 
-export const Map = ({
+const MapComponent = ({
   services,
   selectedService,
   onServiceSelect,
@@ -48,7 +48,7 @@ export const Map = ({
         // Only refresh if we crossed the threshold
         if (isAboveThreshold !== wasAboveThreshold.current) {
           wasAboveThreshold.current = isAboveThreshold;
-          highlightServiceBuildings(map.current, services);
+          // highlightServiceBuildings(map.current, services);
         }
       });
 
@@ -61,7 +61,7 @@ export const Map = ({
             wasAboveThreshold.current = map.current.getZoom() >= BUILDING_HIGHLIGHT_ZOOM_THRESHOLD;
             addServiceLabels(map.current, services); // Labels always visible
             addServiceMarkers(map.current, services); // Markers can be hidden
-            highlightServiceBuildings(map.current, services);
+            // highlightServiceBuildings(map.current, services);
           } catch (err) {
             console.error('Error adding service markers:', err);
           }
@@ -89,18 +89,27 @@ export const Map = ({
     }
   }, []);
 
-  // Update service markers when services change
+  // Update service markers when services change (debounced for performance)
   useEffect(() => {
     if (!map.current || isLoading || services.length === 0) return;
 
-    try {
-      // Update labels and markers with new service data
-      addServiceLabels(map.current, services); // Labels always show all
-      addServiceMarkers(map.current, services); // Markers can be filtered
-      highlightServiceBuildings(map.current, services);
-    } catch (err) {
-      console.error('Error updating service markers:', err);
-    }
+    // Use requestAnimationFrame to batch updates
+    const animationFrameId = requestAnimationFrame(() => {
+      if (!map.current) return;
+      
+      try {
+        // Update labels and markers with new service data
+        addServiceLabels(map.current, services); // Labels always show all
+        addServiceMarkers(map.current, services); // Markers can be filtered
+        // highlightServiceBuildings(map.current, services);
+      } catch (err) {
+        console.error('Error updating service markers:', err);
+      }
+    });
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
   }, [services, isLoading]);
 
   // Add click handlers for service markers
@@ -212,3 +221,5 @@ export const Map = ({
     </div>
   );
 };
+
+export const Map = memo(MapComponent);

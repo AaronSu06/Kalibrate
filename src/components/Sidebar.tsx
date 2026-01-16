@@ -1,10 +1,11 @@
+import { memo } from 'react';
 import type { SidebarProps } from '@/types';
 import { CategoryList } from './CategoryList';
 import { getServiceCounts } from '@/data/services';
 import { LiquidGlassCard } from '@/components/ui/liquid-glass';
 import kalibrateLogo from '@/public/kali.webp';
 
-export const Sidebar = ({
+const SidebarComponent = ({
   services,
   selectedCategories,
   onCategoryToggle,
@@ -24,10 +25,10 @@ export const Sidebar = ({
       >
         {/* Header */}
         <div className="relative px-6 py-5">
-          <h1 className="text-lg font-semibold tracking-tight text-white/90">
+          <h1 className="text-xl font-semibold tracking-tight text-white/90">
             Kalibrate
           </h1>
-          <p className="text-sm text-white/45 mt-0.5">
+          <p className="text-base text-white/45 mt-0.5">
             Kingston, ON
           </p>
         </div>
@@ -40,7 +41,7 @@ export const Sidebar = ({
               w-full flex items-center gap-2
               px-3 py-2 rounded-lg
               bg-white/[0.06] hover:bg-white/[0.1]
-              text-white/75 text-sm font-medium
+              text-white/75 text-base font-medium
               transition-all duration-150
               focus:outline-none focus:ring-1 focus:ring-white/25
               shadow-[0_6px_16px_rgba(0,0,0,0.2)]
@@ -109,3 +110,5 @@ export const Sidebar = ({
     </LiquidGlassCard>
   );
 };
+
+export const Sidebar = memo(SidebarComponent);

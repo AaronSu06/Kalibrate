@@ -59,10 +59,8 @@ export const addServiceMarkers = (
 
   // Remove existing marker layers and source (not labels)
   const markerLayersToRemove = [
-    'service-markers-glow-outer',
     'service-markers-glow',
     'service-markers-core',
-    'service-markers-base',
   ];
   markerLayersToRemove.forEach(layerId => {
     if (map.getLayer(layerId)) map.removeLayer(layerId);
@@ -98,25 +96,7 @@ export const addServiceMarkers = (
     data: markersGeojson,
   });
 
-  // Outer glow layer (largest, most transparent)
-  map.addLayer({
-    id: 'service-markers-glow-outer',
-    type: 'circle',
-    source: 'services-markers',
-    paint: {
-      'circle-radius': [
-        'interpolate', ['linear'], ['zoom'],
-        10, 15,
-        15, 22,
-        18, 30,
-      ],
-      'circle-color': ['get', 'color'],
-      'circle-opacity': 0.5,
-      'circle-blur': 1,
-    },
-  });
-
-  // Inner glow layer
+  // Massive outer glow with screen blend to override darkness
   map.addLayer({
     id: 'service-markers-glow',
     type: 'circle',
@@ -124,34 +104,17 @@ export const addServiceMarkers = (
     paint: {
       'circle-radius': [
         'interpolate', ['linear'], ['zoom'],
-        10, 9,
-        15, 14,
-        18, 18,
+        10, 12,
+        15, 18,
+        18, 24,
       ],
-      'circle-color': ['get', 'color'],
+      'circle-color': '#FFFFFF',  // Pure white glow
       'circle-opacity': 0.8,
       'circle-blur': 0.3,
     },
   });
 
-  // White base layer for contrast
-  map.addLayer({
-    id: 'service-markers-base',
-    type: 'circle',
-    source: 'services-markers',
-    paint: {
-      'circle-radius': [
-        'interpolate', ['linear'], ['zoom'],
-        10, 6,
-        15, 8,
-        18, 11,
-      ],
-      'circle-color': '#ffffff',
-      'circle-opacity': 1,
-    },
-  });
-
-  // Bright neon core - use match expression for explicit colors
+  // Large bright core
   map.addLayer({
     id: 'service-markers-core',
     type: 'circle',
@@ -159,23 +122,57 @@ export const addServiceMarkers = (
     paint: {
       'circle-radius': [
         'interpolate', ['linear'], ['zoom'],
-        10, 5,
-        15, 7,
-        18, 10,
+        10, 6,
+        15, 9,
+        18, 12,
       ],
       'circle-color': [
         'match',
         ['get', 'category'],
-        'healthcare', '#FF3366',
-        'grocery', '#39FF14',
-        'banking', '#00BFFF',
-        'pharmacy', '#BF00FF',
-        'transportation', '#FFFF00',
-        'community', '#00FFFF',
-        'recreation', '#FF69B4',
-        '#39FF14' // default
+        'healthcare', '#FF0000',      // Pure red
+        'grocery', '#00FF00',          // Pure green  
+        'banking', '#00FFFF',          // Pure cyan
+        'pharmacy', '#FF00FF',         // Pure magenta
+        'transportation', '#FFFF00',   // Pure yellow
+        'community', '#00FFFF',        // Pure cyan
+        'recreation', '#FF1493',       // Deep pink
+        '#00FF00' // default pure green
       ],
       'circle-opacity': 1,
+      'circle-stroke-width': 2,
+      'circle-stroke-color': '#FFFFFF',
+      'circle-stroke-opacity': 1,
+    },
+  });
+
+  // Large bright core
+  map.addLayer({
+    id: 'service-markers-core',
+    type: 'circle',
+    source: 'services-markers',
+    paint: {
+      'circle-radius': [
+        'interpolate', ['linear'], ['zoom'],
+        10, 6,
+        15, 9,
+        18, 12,
+      ],
+      'circle-color': [
+        'match',
+        ['get', 'category'],
+        'healthcare', '#f87171',      // Tailwind red-400
+        'grocery', '#4ade80',          // Tailwind green-400  
+        'banking', '#60a5fa',          // Tailwind blue-400
+        'pharmacy', '#c084fc',         // Tailwind purple-400
+        'transportation', '#fbbf24',   // Tailwind amber-400
+        'community', '#22d3ee',        // Tailwind cyan-400
+        'recreation', '#f472b6',       // Tailwind pink-400
+        '#4ade80' // default green-400
+      ],
+      'circle-opacity': 1,
+      'circle-stroke-width': 2,
+      'circle-stroke-color': '#FFFFFF',
+      'circle-stroke-opacity': 1,
     },
   });
 };
@@ -220,18 +217,20 @@ export const addServiceLabels = (
     id: 'service-labels',
     type: 'symbol',
     source: 'services-labels',
+    minzoom: 13, // Only show labels at zoom 13+
     layout: {
       'text-field': ['get', 'name'],
       'text-size': [
         'interpolate', ['linear'], ['zoom'],
-        10, 9,
-        15, 11,
-        18, 13,
+        13, 8,
+        15, 10,
+        18, 12,
       ],
-      'text-offset': [0, 1.8],
+      'text-offset': [0, 1.5],
       'text-anchor': 'top',
       'text-max-width': 10,
       'text-allow-overlap': false,
+      'text-optional': true, // Allow text to be hidden if it doesn't fit
     },
     paint: {
       'text-color': '#ffffff',

@@ -23,15 +23,18 @@ function generateId(prefix: string, objectId: number): string {
 
 function parseFoodFeatures(data: GeoJSONCollection): ServiceLocation[] {
   const services: ServiceLocation[] = [];
+  const features = data.features;
+  const len = features.length;
 
-  for (const feature of data.features) {
+  for (let i = 0; i < len; i++) {
+    const feature = features[i];
     const props = feature.properties;
     const userType = props.USER_Type as string | undefined;
     const category = mapFoodTypeToCategory(userType);
 
     if (!category) continue; // Skip unmapped types
 
-    const [longitude, latitude] = feature.geometry.coordinates;
+    const coords = feature.geometry.coordinates;
 
     services.push({
       id: generateId('food', props.OBJECTID as number),
@@ -40,7 +43,7 @@ function parseFoodFeatures(data: GeoJSONCollection): ServiceLocation[] {
         'Unknown Food Resource',
       category,
       address: (props.USER_Address as string) || '',
-      coordinates: { latitude, longitude },
+      coordinates: { latitude: coords[1], longitude: coords[0] },
       description: `${userType} - ${(props.USER_Affordability as string) || 'Contact for pricing'}`,
       website: props.USER_More_information as string | undefined,
     });
@@ -51,15 +54,18 @@ function parseFoodFeatures(data: GeoJSONCollection): ServiceLocation[] {
 
 function parsePOIFeatures(data: GeoJSONCollection): ServiceLocation[] {
   const services: ServiceLocation[] = [];
+  const features = data.features;
+  const len = features.length;
 
-  for (const feature of data.features) {
+  for (let i = 0; i < len; i++) {
+    const feature = features[i];
     const props = feature.properties;
     const poiTypeDesc = props.POI_TYPE_DESC as string | undefined;
     const category = mapPOITypeToCategory(poiTypeDesc);
 
     if (!category) continue; // Skip unmapped types
 
-    const [longitude, latitude] = feature.geometry.coordinates;
+    const coords = feature.geometry.coordinates;
 
     services.push({
       id: generateId('poi', props.OBJECTID as number),
@@ -69,7 +75,7 @@ function parsePOIFeatures(data: GeoJSONCollection): ServiceLocation[] {
         'Unknown Location',
       category,
       address: (props.ADDRESS as string) || '',
-      coordinates: { latitude, longitude },
+      coordinates: { latitude: coords[1], longitude: coords[0] },
       description: (props.SUB_DESCRIPTION as string) || poiTypeDesc || '',
       website: props.URL as string | undefined,
     });

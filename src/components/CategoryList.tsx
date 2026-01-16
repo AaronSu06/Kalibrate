@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { CategoryListProps, ServiceCategory } from '@/types';
 
 const CATEGORY_INFO: Record<
@@ -13,7 +14,7 @@ const CATEGORY_INFO: Record<
   recreation: { label: 'Recreation', icon: '🏞️', color: 'bg-pink-500' },
 };
 
-export const CategoryList = ({
+const CategoryListComponent = ({
   selectedCategories,
   onToggle,
   serviceCounts,
@@ -32,22 +33,22 @@ export const CategoryList = ({
             key={category}
             onClick={() => onToggle(category)}
             className={`
-              w-full flex items-center justify-between px-2 py-2
+              w-full flex items-center justify-between px-2 py-2 rounded-md
               transition-all duration-150 border-l-2
               ${
                 isSelected
-                  ? 'bg-transparent border-white/40 text-white'
-                  : 'bg-transparent border-transparent text-white/55 hover:text-white/80'
+                  ? 'bg-white/[0.08] border-white/50 text-white'
+                  : 'bg-transparent border-transparent text-white/55 hover:bg-white/[0.04] hover:text-white/80'
               }
-              focus:outline-none focus:ring-1 focus:ring-white/40
+              focus:outline-none
             `}
             aria-pressed={isSelected}
             aria-label={`${info.label}, ${count} locations ${isSelected ? 'selected' : ''}`}
           >
-            <div className={`text-sm ${isSelected ? 'font-medium' : 'font-normal'}`}>
+            <div className={`text-lg ${isSelected ? 'font-medium' : 'font-normal'}`}>
               {info.label}
             </div>
-            <div className={`text-xs ${isSelected ? 'text-white/70' : 'text-white/45'}`}>
+            <div className={`text-base ${isSelected ? 'text-white/70' : 'text-white/45'}`}>
               {count}
             </div>
           </button>
@@ -56,3 +57,5 @@ export const CategoryList = ({
     </div>
   );
 };
+
+export const CategoryList = memo(CategoryListComponent);
