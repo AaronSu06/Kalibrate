@@ -49,18 +49,91 @@ export const createMap = (
 let currentServices: ServiceLocation[] = [];
 let highlightedServiceIds: Set<string> = new Set();
 
+// Create SVG icon for each category
+const createCategoryIcon = (category: string, color: string): string => {
+  const iconMap: Record<string, string> = {
+    hospitals: '<path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 10h5v2h-5v5h-2v-5H5v-2h5V7h2v5z"/>',
+    clinics: '<path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 10h5v2h-5v5h-2v-5H5v-2h5V7h2v5z"/>',
+    grocery: '<path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/>',
+    transportation: '<path d="M12 2c-4.42 0-8 .5-8 4v10c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4zM7.5 16c-.83 0-1.5-.67-1.5-1.5S6.67 13 7.5 13s1.5.67 1.5 1.5S8.33 16 7.5 16zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM6 10V6h12v4H6z"/>',
+    religious: '<path d="M14 2h-4v9H2v2h8v9h4v-9h8v-2h-8z"/>',
+    gardens: '<path d="M14 2h-4v7H5v2h5v11h4V11h5V9h-5z"/><circle cx="12" cy="20" r="2"/>',
+    entertainment: '<path d="M18 3v2h-2V3H8v2H6V3H4v18h2v-2h2v2h8v-2h2v2h2V3h-2zM8 17H6v-2h2v2zm0-4H6v-2h2v2zm0-4H6V7h2v2zm10 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2z"/>',
+    education: '<path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/>',
+    government: '<path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 6h2v2h-2V7zm0 4h2v6h-2v-6z"/>',
+    emergency: '<path d="M20.79 9.23l-2-3.46a.993.993 0 00-.86-.5h-4L12 2 10.07 5.27h-4c-.36 0-.69.19-.86.5l-2 3.46a1 1 0 000 1L5.21 13.5a.99.99 0 00.86.5h4L12 17.27l1.93-3.27h4c.36 0 .69-.19.86-.5l2-3.46a1 1 0 000-1zM12 13.5l-2.5-4.5L12 5l2.5 4.5L12 13.5z"/>',
+    housing: '<path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>',
+    fitness: '<path d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29z"/>',
+    banks: '<path d="M12 2L2 7v2h20V7l-10-5zm-8 7v6h4v-6H4zm6 0v6h4v-6h-4zm6 0v6h4v-6h-4zM2 20h20v2H2v-2z"/>',
+    libraries: '<path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/>',
+  };
+
+  const iconPath = iconMap[category] || iconMap['entertainment'];
+  
+  return `<svg width="32" height="32" viewBox="0 0 24 24" fill="${color}" xmlns="http://www.w3.org/2000/svg">
+    <g stroke="#000000" stroke-width="0.5">
+      ${iconPath}
+    </g>
+  </svg>`;
+};
+
+// Load category icons into the map
+const loadCategoryIcons = async (map: mapboxgl.Map): Promise<void> => {
+  const categories = {
+    hospitals: '#f87171',
+    clinics: '#c084fc',
+    grocery: '#4ade80',
+    transportation: '#fbbf24',
+    religious: '#e0e7ff',
+    gardens: '#86efac',
+    entertainment: '#f472b6',
+    education: '#60a5fa',
+    government: '#fb923c',
+    emergency: '#f87171',
+    housing: '#fb923c',
+    fitness: '#4ade80',
+    banks: '#22d3ee',
+    libraries: '#a78bfa',
+  };
+
+  const loadPromises = Object.entries(categories).map(([category, color]) => {
+    return new Promise<void>((resolve, reject) => {
+      const img = new Image(32, 32);
+      const svgString = createCategoryIcon(category, color);
+      const blob = new Blob([svgString], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      
+      img.onload = () => {
+        if (!map.hasImage(`icon-${category}`)) {
+          map.addImage(`icon-${category}`, img);
+        }
+        URL.revokeObjectURL(url);
+        resolve();
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+  });
+
+  await Promise.all(loadPromises);
+};
+
 // Add service locations with glowing markers and labels
-export const addServiceMarkers = (
+export const addServiceMarkers = async (
   map: mapboxgl.Map,
   services: ServiceLocation[],
   excludeIds: Set<string> = new Set()
-): void => {
+): Promise<void> => {
   currentServices = services;
+
+  // Load icons if not already loaded
+  await loadCategoryIcons(map);
 
   // Remove existing marker layers and source (not labels)
   const markerLayersToRemove = [
     'service-markers-glow',
     'service-markers-core',
+    'service-markers-icon',
   ];
   markerLayersToRemove.forEach(layerId => {
     if (map.getLayer(layerId)) map.removeLayer(layerId);
@@ -96,7 +169,7 @@ export const addServiceMarkers = (
     data: markersGeojson,
   });
 
-  // Massive outer glow with screen blend to override darkness
+  // White glow background
   map.addLayer({
     id: 'service-markers-glow',
     type: 'circle',
@@ -104,52 +177,34 @@ export const addServiceMarkers = (
     paint: {
       'circle-radius': [
         'interpolate', ['linear'], ['zoom'],
-        10, 12,
-        15, 18,
-        18, 24,
+        10, 14,
+        15, 20,
+        18, 26,
       ],
-      'circle-color': '#FFFFFF',  // Pure white glow
-      'circle-opacity': 0.8,
-      'circle-blur': 0.3,
+      'circle-color': '#FFFFFF',
+      'circle-opacity': 0.6,
+      'circle-blur': 0.4,
     },
   });
 
-  // Large bright core
+  // Icon layer
   map.addLayer({
-    id: 'service-markers-core',
-    type: 'circle',
+    id: 'service-markers-icon',
+    type: 'symbol',
     source: 'services-markers',
-    paint: {
-      'circle-radius': [
+    layout: {
+      'icon-image': ['concat', 'icon-', ['get', 'category']],
+      'icon-size': [
         'interpolate', ['linear'], ['zoom'],
-        10, 6,
-        15, 9,
-        18, 12,
+        10, 0.5,
+        15, 0.7,
+        18, 0.9,
       ],
-      'circle-color': [
-        'match',
-        ['get', 'category'],
-        'hospitals', '#FF3366',
-        'clinics', '#BF00FF',
-        'grocery', '#39FF14',
-        'transportation', '#FFFF00',
-        'religious', '#E6E6FA',
-        'gardens', '#32CD32',
-        'entertainment', '#FF69B4',
-        'education', '#00BFFF',
-        'government', '#FFB347',
-        'emergency', '#FF4500',
-        'housing', '#FF8C00',
-        'fitness', '#00FF7F',
-        'banks', '#00CED1',
-        'libraries', '#9370DB',
-        'daycare', '#FFB6C1',
-        '#39FF14' // default
-      ],
-      'circle-opacity': 1,
-      'circle-stroke-width': 2,
-      'circle-stroke-color': '#FFFFFF',
-      'circle-stroke-opacity': 1,
+      'icon-allow-overlap': true,
+      'icon-ignore-placement': false,
+    },
+    paint: {
+      'icon-opacity': 1,
     },
   });
 };
@@ -194,25 +249,27 @@ export const addServiceLabels = (
     id: 'service-labels',
     type: 'symbol',
     source: 'services-labels',
-    minzoom: 13, // Only show labels at zoom 13+
+    minzoom: 11, // Show labels at zoom 11+
     layout: {
       'text-field': ['get', 'name'],
       'text-size': [
         'interpolate', ['linear'], ['zoom'],
-        13, 8,
-        15, 10,
-        18, 12,
+        11, 9,
+        13, 10,
+        15, 11,
+        18, 13,
       ],
       'text-offset': [0, 1.5],
       'text-anchor': 'top',
-      'text-max-width': 10,
+      'text-max-width': 12,
       'text-allow-overlap': false,
       'text-optional': true, // Allow text to be hidden if it doesn't fit
     },
     paint: {
       'text-color': '#ffffff',
-      'text-halo-color': 'rgba(0, 0, 0, 0.9)',
-      'text-halo-width': 2,
+      'text-halo-color': 'rgba(0, 0, 0, 0.95)',
+      'text-halo-width': 2.5,
+      'text-halo-blur': 0.5,
     },
   });
 };
@@ -224,15 +281,15 @@ export const getCurrentServices = (): ServiceLocation[] => currentServices;
 export const flyToLocation = (
   map: mapboxgl.Map,
   coordinates: { latitude: number; longitude: number },
-  zoom = 18 // Much closer zoom to see the building clearly
+  zoom = 19 // Very close zoom to see the building clearly
 ): void => {
   map.flyTo({
     center: [coordinates.longitude, coordinates.latitude],
     zoom,
-    pitch: 60, // Maintain 3D tilt
+    pitch: 65, // Steeper 3D tilt for better building view
     bearing: map.getBearing(), // Keep current rotation
     essential: true,
-    duration: 2000, // Smooth 2-second animation
+    duration: 1500, // Smooth 1.5-second animation
   });
 };
 

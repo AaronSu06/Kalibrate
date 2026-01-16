@@ -141,7 +141,7 @@ const MapComponent = ({
     };
 
     // Add click handlers for markers
-    const markerLayers = ['service-markers-core', 'service-labels'];
+    const markerLayers = ['service-markers-icon', 'service-labels'];
     markerLayers.forEach(layerId => {
       if (map.current?.getLayer(layerId)) {
         map.current.on('click', layerId, handleClick);
