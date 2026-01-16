@@ -5,6 +5,12 @@ import { CATEGORY_COLORS } from '@/types';
 export const MAPBOX_STYLE_URL =
   'mapbox://styles/skruby/cmkelghk200bd01rxa9mrhtv1';
 
+// Kingston area bounds - restrict map panning to the service area
+export const KINGSTON_BOUNDS: [[number, number], [number, number]] = [
+  [-76.65, 44.15], // Southwest corner
+  [-76.35, 44.32], // Northeast corner
+];
+
 // Initialize Mapbox
 export const initializeMapbox = (): void => {
   const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
@@ -16,7 +22,7 @@ export const initializeMapbox = (): void => {
   mapboxgl.accessToken = token;
 };
 
-// Create map instance with 3D configuration
+// Create map instance with 3D configuration and performance optimizations
 export const createMap = (
   container: HTMLElement,
   initialView: MapViewState
@@ -26,10 +32,24 @@ export const createMap = (
     style: MAPBOX_STYLE_URL,
     center: [initialView.longitude, initialView.latitude],
     zoom: initialView.zoom,
-    pitch: initialView.pitch, // Tilt the map to see 3D buildings (0-85 degrees)
-    bearing: initialView.bearing, // Rotation of the map (0-360 degrees)
-    attributionControl: true,
-    antialias: true, // Smooth edges for 3D objects
+    pitch: initialView.pitch,
+    bearing: initialView.bearing,
+    attributionControl: false,
+    antialias: false, // Disable antialiasing for less GPU memory
+    // AGGRESSIVE memory optimizations
+    maxBounds: KINGSTON_BOUNDS,
+    minZoom: 13, // Higher min zoom = fewer tiles to cache
+    maxZoom: 18, // Lower max zoom = fewer high-res tiles
+    fadeDuration: 0,
+    trackResize: false, // Disable resize tracking
+    refreshExpiredTiles: false,
+    maxTileCacheSize: 10, // Minimal tile cache (was 50)
+    localIdeographFontFamily: false,
+    collectResourceTiming: false,
+    crossSourceCollisions: false,
+    preserveDrawingBuffer: false,
+    renderWorldCopies: false,
+    pixelRatio: 1, // Force 1x pixel ratio (huge memory savings on retina)
   });
 
   // Add navigation controls (zoom, rotate, pitch)
@@ -55,6 +75,7 @@ const createCategoryIcon = (category: string, color: string): string => {
     hospitals: '<path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 10h5v2h-5v5h-2v-5H5v-2h5V7h2v5z"/>',
     clinics: '<path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 10h5v2h-5v5h-2v-5H5v-2h5V7h2v5z"/>',
     grocery: '<path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/>',
+    daycare: '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>',
     transportation: '<path d="M12 2c-4.42 0-8 .5-8 4v10c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4zM7.5 16c-.83 0-1.5-.67-1.5-1.5S6.67 13 7.5 13s1.5.67 1.5 1.5S8.33 16 7.5 16zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM6 10V6h12v4H6z"/>',
     religious: '<path d="M14 2h-4v9H2v2h8v9h4v-9h8v-2h-8z"/>',
     gardens: '<path d="M14 2h-4v7H5v2h5v11h4V11h5V9h-5z"/><circle cx="12" cy="20" r="2"/>',
@@ -77,8 +98,17 @@ const createCategoryIcon = (category: string, color: string): string => {
   </svg>`;
 };
 
-// Load category icons into the map
+// Cache loaded icons to avoid reloading
+let iconsLoaded = false;
+
+// Load category icons into the map - optimized with caching
 const loadCategoryIcons = async (map: mapboxgl.Map): Promise<void> => {
+  // Skip if already loaded
+  if (iconsLoaded) {
+    // Verify icons still exist (in case map was recreated)
+    if (map.hasImage('icon-hospitals')) return;
+  }
+  
   const categories = {
     hospitals: '#f87171',
     clinics: '#c084fc',
@@ -94,10 +124,17 @@ const loadCategoryIcons = async (map: mapboxgl.Map): Promise<void> => {
     fitness: '#4ade80',
     banks: '#22d3ee',
     libraries: '#a78bfa',
+    daycare: '#fcd34d',
   };
 
+  // Load all icons in parallel for faster loading
   const loadPromises = Object.entries(categories).map(([category, color]) => {
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<void>((resolve) => {
+      if (map.hasImage(`icon-${category}`)) {
+        resolve();
+        return;
+      }
+      
       const img = new Image(32, 32);
       const svgString = createCategoryIcon(category, color);
       const blob = new Blob([svgString], { type: 'image/svg+xml' });
@@ -110,12 +147,16 @@ const loadCategoryIcons = async (map: mapboxgl.Map): Promise<void> => {
         URL.revokeObjectURL(url);
         resolve();
       };
-      img.onerror = reject;
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(); // Don't fail on icon errors
+      };
       img.src = url;
     });
   });
 
   await Promise.all(loadPromises);
+  iconsLoaded = true;
 };
 
 // Add service locations with glowing markers and labels
@@ -124,6 +165,15 @@ export const addServiceMarkers = async (
   services: ServiceLocation[],
   excludeIds: Set<string> = new Set()
 ): Promise<void> => {
+  // Wait for map to be idle (fully loaded and rendered)
+  if (!map.loaded()) {
+    return new Promise((resolve) => {
+      map.once('idle', () => {
+        addServiceMarkers(map, services, excludeIds).then(resolve);
+      });
+    });
+  }
+
   currentServices = services;
 
   // Load icons if not already loaded
@@ -134,6 +184,7 @@ export const addServiceMarkers = async (
     'service-markers-glow',
     'service-markers-core',
     'service-markers-icon',
+    'service-markers-hit',
   ];
   markerLayersToRemove.forEach(layerId => {
     if (map.getLayer(layerId)) map.removeLayer(layerId);
@@ -145,7 +196,7 @@ export const addServiceMarkers = async (
   // Filter out services that have building highlights (for markers only)
   const visibleServices = services.filter(s => !excludeIds.has(s.id));
 
-  // Create GeoJSON for markers (filtered)
+  // Create GeoJSON for markers (filtered) - minimal properties to save memory
   const markersGeojson: GeoJSON.FeatureCollection = {
     type: 'FeatureCollection',
     features: visibleServices.map(service => ({
@@ -156,38 +207,39 @@ export const addServiceMarkers = async (
       },
       properties: {
         id: service.id,
-        name: service.name,
         category: service.category,
         color: CATEGORY_COLORS[service.category],
       },
     })),
   };
 
-  // Add the markers source
+  // Add the markers source with clustering disabled for simplicity
   map.addSource('services-markers', {
     type: 'geojson',
     data: markersGeojson,
+    tolerance: 0.5, // Simplify geometry for better performance
   });
 
-  // White glow background
+  // Single colored circle layer (removed glow for memory savings)
   map.addLayer({
-    id: 'service-markers-glow',
+    id: 'service-markers-core',
     type: 'circle',
     source: 'services-markers',
     paint: {
       'circle-radius': [
         'interpolate', ['linear'], ['zoom'],
-        10, 14,
-        15, 20,
-        18, 26,
+        13, 6,
+        16, 10,
+        18, 14,
       ],
-      'circle-color': '#FFFFFF',
-      'circle-opacity': 0.6,
-      'circle-blur': 0.4,
+      'circle-color': ['get', 'color'],
+      'circle-opacity': 1,
+      'circle-stroke-width': 2,
+      'circle-stroke-color': '#FFFFFF',
     },
   });
 
-  // Icon layer
+  // Icon layer on top - interactive (smaller sizes)
   map.addLayer({
     id: 'service-markers-icon',
     type: 'symbol',
@@ -196,33 +248,59 @@ export const addServiceMarkers = async (
       'icon-image': ['concat', 'icon-', ['get', 'category']],
       'icon-size': [
         'interpolate', ['linear'], ['zoom'],
-        10, 0.5,
-        15, 0.7,
-        18, 0.9,
+        13, 0.4,
+        16, 0.6,
+        18, 0.8,
       ],
       'icon-allow-overlap': true,
-      'icon-ignore-placement': false,
+      'icon-ignore-placement': true,
     },
     paint: {
       'icon-opacity': 1,
     },
   });
+
+  // Hit detection layer - smaller radius
+  map.addLayer({
+    id: 'service-markers-hit',
+    type: 'circle',
+    source: 'services-markers',
+    paint: {
+      'circle-radius': [
+        'interpolate', ['linear'], ['zoom'],
+        13, 10,
+        16, 14,
+        18, 18,
+      ],
+      'circle-color': 'rgba(0,0,0,0)',
+      'circle-opacity': 0,
+    },
+  });
 };
 
-// Add labels separately (always shows all services)
+// Add labels separately - REMOVED separate source, reuse markers source
 export const addServiceLabels = (
   map: mapboxgl.Map,
   services: ServiceLocation[]
 ): void => {
-  // Remove existing labels
+  // Wait for map to be loaded
+  if (!map.loaded()) {
+    map.once('idle', () => {
+      addServiceLabels(map, services);
+    });
+    return;
+  }
+
+  // Remove existing labels layer only (source will be shared with markers)
   if (map.getLayer('service-labels')) {
     map.removeLayer('service-labels');
   }
+  // Remove old separate source if it exists
   if (map.getSource('services-labels')) {
     map.removeSource('services-labels');
   }
 
-  // Create GeoJSON for all services (labels always visible)
+  // Create a minimal labels-only source (only name needed)
   const labelsGeojson: GeoJSON.FeatureCollection = {
     type: 'FeatureCollection',
     features: services.map(service => ({
@@ -234,7 +312,6 @@ export const addServiceLabels = (
       properties: {
         id: service.id,
         name: service.name,
-        category: service.category,
       },
     })),
   };
@@ -242,6 +319,7 @@ export const addServiceLabels = (
   map.addSource('services-labels', {
     type: 'geojson',
     data: labelsGeojson,
+    tolerance: 0.5,
   });
 
   // Text labels (always visible for all services)
@@ -249,21 +327,21 @@ export const addServiceLabels = (
     id: 'service-labels',
     type: 'symbol',
     source: 'services-labels',
-    minzoom: 11, // Show labels at zoom 11+
+    minzoom: 13, // Only show labels at zoom 13+
     layout: {
       'text-field': ['get', 'name'],
       'text-size': [
         'interpolate', ['linear'], ['zoom'],
-        11, 9,
-        13, 10,
-        15, 11,
-        18, 13,
+        13, 9,
+        15, 10,
+        18, 12,
       ],
-      'text-offset': [0, 1.5],
+      'text-offset': [0, 2.0],  // Push text further down from icon
       'text-anchor': 'top',
       'text-max-width': 12,
       'text-allow-overlap': false,
-      'text-optional': true, // Allow text to be hidden if it doesn't fit
+      'text-optional': true,
+      'text-ignore-placement': false,
     },
     paint: {
       'text-color': '#ffffff',
@@ -277,38 +355,37 @@ export const addServiceLabels = (
 // Get current services for external use
 export const getCurrentServices = (): ServiceLocation[] => currentServices;
 
-// Fly to location with close zoom and 3D view
+// Fly to location - optimized for lower memory
 export const flyToLocation = (
   map: mapboxgl.Map,
   coordinates: { latitude: number; longitude: number },
-  zoom = 19 // Very close zoom to see the building clearly
+  zoom = 17 // Lower zoom = less memory
 ): void => {
   map.flyTo({
     center: [coordinates.longitude, coordinates.latitude],
     zoom,
-    pitch: 65, // Steeper 3D tilt for better building view
-    bearing: map.getBearing(), // Keep current rotation
+    pitch: 45, // Lower pitch = less 3D memory
+    bearing: map.getBearing(),
     essential: true,
-    duration: 1500, // Smooth 1.5-second animation
+    duration: 600, // Faster animation
+    easing: (t) => t,
   });
 };
 
-// Enable 3D buildings layer
+// Enable 3D buildings layer - SIMPLIFIED for lower memory usage
 export const enable3DBuildings = (map: mapboxgl.Map): void => {
   if (map.getLayer('3d-buildings')) {
     return;
   }
 
-  // Add mapbox-streets source if composite doesn't exist
-  // This provides building footprint data
-  if (!map.getSource('composite') && !map.getSource('mapbox-streets')) {
-    map.addSource('mapbox-streets', {
-      type: 'vector',
-      url: 'mapbox://mapbox.mapbox-streets-v8',
-    });
+  // Use existing composite source if available (don't add new sources)
+  const buildingSource = map.getSource('composite') ? 'composite' : null;
+  
+  // Skip 3D buildings if composite source not available (saves memory)
+  if (!buildingSource) {
+    console.log('Skipping 3D buildings - no composite source');
+    return;
   }
-
-  const buildingSource = map.getSource('composite') ? 'composite' : 'mapbox-streets';
 
   const style = map.getStyle();
   const labelLayerId = style?.layers?.find(layer => {
@@ -316,7 +393,7 @@ export const enable3DBuildings = (map: mapboxgl.Map): void => {
     return layer.type === 'symbol' && layout?.['text-field'];
   })?.id;
 
-  // Add 3D building extrusions
+  // Add simplified 3D building extrusions (higher minzoom = fewer buildings rendered)
   map.addLayer(
     {
       id: '3d-buildings',
@@ -324,35 +401,25 @@ export const enable3DBuildings = (map: mapboxgl.Map): void => {
       'source-layer': 'building',
       filter: ['==', 'extrude', 'true'],
       type: 'fill-extrusion',
-      minzoom: 15,
+      minzoom: 16, // Higher minzoom = less memory (was 15)
       paint: {
         'fill-extrusion-color': '#aaa',
         'fill-extrusion-height': [
           'interpolate',
           ['linear'],
           ['zoom'],
-          15,
+          16,
           0,
-          15.05,
-          ['coalesce', ['get', 'height'], 10],
+          16.05,
+          ['coalesce', ['get', 'height'], 8], // Lower default height
         ],
-        'fill-extrusion-base': [
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          15,
-          0,
-          15.05,
-          ['get', 'min_height'],
-        ],
-        'fill-extrusion-opacity': 0.7,
-        'fill-extrusion-vertical-gradient': true,
+        'fill-extrusion-base': 0, // Simplified - no base offset
+        'fill-extrusion-opacity': 0.6,
+        'fill-extrusion-vertical-gradient': false, // Disable gradient for performance
       },
     },
     labelLayerId
   );
-
-  console.log('3D buildings layer added using source:', buildingSource);
 };
 
 

@@ -1,10 +1,10 @@
-# AccessKingston MVP
+# Kalibrate
 
 Voice-first accessibility platform for Kingston, Ontario services.
 
 ## Overview
 
-AccessKingston helps newcomers, seniors, and non-native English speakers easily find essential services in Kingston, Ontario. Users can visually explore services on an interactive map or use voice/chat to ask questions naturally.
+Kalibrate helps newcomers, seniors, and non-native English speakers easily find essential services in Kingston, Ontario. Users can visually explore services on an interactive map or use voice/chat to ask questions naturally.
 
 ## Features
 
