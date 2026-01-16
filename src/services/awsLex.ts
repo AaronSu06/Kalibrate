@@ -98,7 +98,6 @@ export const sendMessage = async (text: string): Promise<LexResponse> => {
     sessionId: getSessionId(),
     text,
   });
-
   const response = await getLexClient().send(command);
   const message =
     response.messages

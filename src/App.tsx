@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Map } from './components/Map';
 import { Sidebar } from './components/Sidebar';
 import { ChatbotModal } from './components/ChatbotModal';

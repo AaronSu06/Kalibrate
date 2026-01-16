@@ -5,13 +5,21 @@ const CATEGORY_INFO: Record<
   ServiceCategory,
   { label: string; icon: string; color: string }
 > = {
-  healthcare: { label: 'Healthcare', icon: '🏥', color: 'bg-red-500' },
+  hospitals: { label: 'Hospitals', icon: '🏥', color: 'bg-red-500' },
+  clinics: { label: 'Clinics', icon: '🩺', color: 'bg-purple-500' },
   grocery: { label: 'Groceries', icon: '🛒', color: 'bg-green-500' },
-  banking: { label: 'Banking', icon: '🏦', color: 'bg-blue-500' },
-  pharmacy: { label: 'Pharmacies', icon: '💊', color: 'bg-purple-500' },
   transportation: { label: 'Transportation', icon: '🚌', color: 'bg-amber-500' },
-  community: { label: 'Community', icon: '🏛️', color: 'bg-cyan-500' },
-  recreation: { label: 'Recreation', icon: '🏞️', color: 'bg-pink-500' },
+  religious: { label: 'Places of Worship', icon: '⛪', color: 'bg-indigo-300' },
+  gardens: { label: 'Parks & Gardens', icon: '🌳', color: 'bg-lime-500' },
+  entertainment: { label: 'Arts & Entertainment', icon: '🎭', color: 'bg-pink-500' },
+  education: { label: 'Education', icon: '🎓', color: 'bg-blue-500' },
+  government: { label: 'Government', icon: '🏢', color: 'bg-orange-500' },
+  emergency: { label: 'Emergency Services', icon: '🚒', color: 'bg-red-600' },
+  housing: { label: 'Accommodations', icon: '🏨', color: 'bg-orange-400' },
+  fitness: { label: 'Fitness & Recreation', icon: '🏋️', color: 'bg-emerald-500' },
+  banks: { label: 'Banks & ATMs', icon: '🏦', color: 'bg-cyan-500' },
+  libraries: { label: 'Libraries', icon: '📚', color: 'bg-purple-400' },
+  daycare: { label: 'Daycare', icon: '👶', color: 'bg-pink-300' },
 };
 
 const CategoryListComponent = ({

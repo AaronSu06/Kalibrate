@@ -129,45 +129,22 @@ export const addServiceMarkers = (
       'circle-color': [
         'match',
         ['get', 'category'],
-        'healthcare', '#FF0000',      // Pure red
-        'grocery', '#00FF00',          // Pure green  
-        'banking', '#00FFFF',          // Pure cyan
-        'pharmacy', '#FF00FF',         // Pure magenta
-        'transportation', '#FFFF00',   // Pure yellow
-        'community', '#00FFFF',        // Pure cyan
-        'recreation', '#FF1493',       // Deep pink
-        '#00FF00' // default pure green
-      ],
-      'circle-opacity': 1,
-      'circle-stroke-width': 2,
-      'circle-stroke-color': '#FFFFFF',
-      'circle-stroke-opacity': 1,
-    },
-  });
-
-  // Large bright core
-  map.addLayer({
-    id: 'service-markers-core',
-    type: 'circle',
-    source: 'services-markers',
-    paint: {
-      'circle-radius': [
-        'interpolate', ['linear'], ['zoom'],
-        10, 6,
-        15, 9,
-        18, 12,
-      ],
-      'circle-color': [
-        'match',
-        ['get', 'category'],
-        'healthcare', '#f87171',      // Tailwind red-400
-        'grocery', '#4ade80',          // Tailwind green-400  
-        'banking', '#60a5fa',          // Tailwind blue-400
-        'pharmacy', '#c084fc',         // Tailwind purple-400
-        'transportation', '#fbbf24',   // Tailwind amber-400
-        'community', '#22d3ee',        // Tailwind cyan-400
-        'recreation', '#f472b6',       // Tailwind pink-400
-        '#4ade80' // default green-400
+        'hospitals', '#FF3366',
+        'clinics', '#BF00FF',
+        'grocery', '#39FF14',
+        'transportation', '#FFFF00',
+        'religious', '#E6E6FA',
+        'gardens', '#32CD32',
+        'entertainment', '#FF69B4',
+        'education', '#00BFFF',
+        'government', '#FFB347',
+        'emergency', '#FF4500',
+        'housing', '#FF8C00',
+        'fitness', '#00FF7F',
+        'banks', '#00CED1',
+        'libraries', '#9370DB',
+        'daycare', '#FFB6C1',
+        '#39FF14' // default
       ],
       'circle-opacity': 1,
       'circle-stroke-width': 2,

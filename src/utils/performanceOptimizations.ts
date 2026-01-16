@@ -48,10 +48,10 @@ export function requestIdleCallbackPolyfill(
   options?: { timeout?: number }
 ): number {
   if ('requestIdleCallback' in window) {
-    return window.requestIdleCallback(callback, options);
+    return (window as Window & { requestIdleCallback: (cb: () => void, opts?: { timeout?: number }) => number }).requestIdleCallback(callback, options);
   }
   // Fallback for browsers that don't support requestIdleCallback
-  return window.setTimeout(callback, 1) as unknown as number;
+  return setTimeout(callback, 1) as unknown as number;
 }
 
 /**
@@ -59,7 +59,7 @@ export function requestIdleCallbackPolyfill(
  */
 export function cancelIdleCallbackPolyfill(id: number): void {
   if ('cancelIdleCallback' in window) {
-    window.cancelIdleCallback(id);
+    (window as Window & { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(id);
   } else {
     clearTimeout(id);
   }
