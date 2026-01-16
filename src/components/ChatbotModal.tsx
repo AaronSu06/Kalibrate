@@ -17,11 +17,9 @@ export const ChatbotModal = ({
       timestamp: new Date(),
     },
   ]);
-  const [inputText, setInputText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
   const {
     isRecording,
@@ -38,21 +36,12 @@ export const ChatbotModal = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Focus input when modal opens
+  // Reset interaction state when modal closes
   useEffect(() => {
-    if (isOpen) {
-      textAreaRef.current?.focus();
-    } else {
+    if (!isOpen) {
       setHasInteracted(false);
     }
   }, [isOpen]);
-
-  useEffect(() => {
-    if (!textAreaRef.current) return;
-    textAreaRef.current.style.height = '0px';
-    const nextHeight = Math.min(textAreaRef.current.scrollHeight, 140);
-    textAreaRef.current.style.height = `${nextHeight}px`;
-  }, [inputText]);
 
   const handleSendMessage = async (text: string) => {
     if (!text.trim()) return;
@@ -66,7 +55,6 @@ export const ChatbotModal = ({
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInputText('');
     setIsSending(true);
 
     try {
@@ -96,13 +84,6 @@ export const ChatbotModal = ({
     } else {
       setHasInteracted(true);
       await startRecording();
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage(inputText);
     }
   };
 
@@ -244,75 +225,46 @@ export const ChatbotModal = ({
             </div>
           )}
 
-          <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-2">
-            <div className="flex items-end gap-2">
-              {isVoiceSupported && (
-                <button
-                  onClick={handleVoiceToggle}
-                  disabled={isProcessing}
-                  className={`
-                    p-2.5 sm:p-3 rounded-lg transition-all duration-200
-                    focus:outline-none focus:ring-1 focus:ring-white/25
-                    ${
-                      isRecording
-                        ? 'bg-red-500/80 text-white animate-pulse'
-                        : 'bg-white/[0.06] hover:bg-white/[0.1] text-white/70'
-                    }
-                    ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}
-                  `}
-                  aria-label={isRecording ? 'Stop recording' : 'Start voice input'}
-                  aria-pressed={isRecording}
-                >
-                  <svg
-                    className="w-4 h-4 sm:w-5 sm:h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                    />
-                  </svg>
-                </button>
-              )}
-              <textarea
-                ref={textAreaRef}
-                value={inputText}
-                onChange={e => {
-                  setInputText(e.target.value);
-                  setHasInteracted(true);
-                }}
-                onKeyPress={handleKeyPress}
-                disabled={isSending || isRecording}
-                placeholder={
-                  isRecording ? 'Listening...' : 'Message Kalibrate...'
-                }
-                rows={1}
-                className="
-                  flex-1 resize-none px-3 sm:px-4 py-2 border border-white/10 rounded-lg
-                  bg-white/[0.04] text-xs text-white/85 placeholder:text-white/40
-                  focus:outline-none focus:ring-1 focus:ring-white/25
-                  disabled:bg-white/[0.02] disabled:cursor-not-allowed
-                "
-                aria-label="Message input"
-              />
+<div className="px-4 sm:px-6 pb-4 sm:pb-5 pt-3 flex flex-col items-center">
+            {/* Microphone Button - Centered and larger */}
+            {isVoiceSupported && (
               <button
-                onClick={() => handleSendMessage(inputText)}
-                disabled={!inputText.trim() || isSending || isRecording}
-                className="
-                  px-4 sm:px-5 py-2 bg-white/[0.12] text-xs text-white/85 rounded-lg
-                  hover:bg-white/[0.18] transition-colors
-                  focus:outline-none focus:ring-1 focus:ring-white/25
-                  disabled:opacity-50 disabled:cursor-not-allowed
-                "
-                aria-label="Send message"
+                onClick={handleVoiceToggle}
+                disabled={isProcessing}
+                className={`
+                  w-16 h-16 sm:w-20 sm:h-20 rounded-full transition-all duration-200
+                  focus:outline-none focus:ring-2 focus:ring-white/30 focus:ring-offset-2 focus:ring-offset-transparent
+                  flex items-center justify-center
+                  ${
+                    isRecording
+                      ? 'bg-red-500 text-white animate-pulse shadow-[0_0_30px_rgba(239,68,68,0.5)]'
+                      : 'bg-white/[0.1] hover:bg-white/[0.15] text-white/80 hover:text-white'
+                  }
+                  ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}
+                `}
+                aria-label={isRecording ? 'Stop recording' : 'Start voice input'}
+                aria-pressed={isRecording}
               >
-                Send
+                <svg
+                  className="w-7 h-7 sm:w-8 sm:h-8"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                  />
+                </svg>
               </button>
-            </div>
+            )}
+            
+            {/* Status text */}
+            <p className="mt-3 text-xs text-white/50">
+              {isRecording ? 'Listening... tap to stop' : isProcessing ? 'Processing...' : 'Tap to speak'}
+            </p>
           </div>
         </LiquidGlassCard>
       </div>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, memo } from 'react';
+import { useEffect, useRef, useState, memo, useCallback } from 'react';
 import type { MapProps } from '@/types';
 import { KINGSTON_CENTER } from '@/types';
 import {
@@ -13,6 +13,38 @@ import type * as mapboxgl from 'mapbox-gl';
 
 const BUILDING_HIGHLIGHT_ZOOM_THRESHOLD = 17;
 
+// Loading screen component - optimized with will-change for GPU acceleration
+const LoadingScreen = memo(({ progress }: { progress: number }) => (
+  <div className="absolute inset-0 bg-black flex flex-col items-center justify-center z-50 will-change-transform">
+    <div className="text-center">
+      {/* Logo/Title */}
+      <h1 className="text-4xl font-bold text-white mb-2 tracking-wider">Kalibrate</h1>
+      <p className="text-neutral-400 text-sm mb-8">Kingston Service Locator</p>
+      
+      {/* Loading bar - GPU accelerated */}
+      <div className="w-64 h-1 bg-neutral-800 rounded-full overflow-hidden">
+        <div 
+          className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 will-change-transform"
+          style={{ 
+            width: `${progress}%`,
+            transform: 'translateZ(0)', // Force GPU layer
+            transition: 'width 150ms ease-out'
+          }}
+        />
+      </div>
+      
+      {/* Loading text */}
+      <p className="text-neutral-500 text-xs mt-4">
+        {progress < 30 ? 'Initializing map...' : 
+         progress < 60 ? 'Loading Kingston area...' : 
+         progress < 90 ? 'Rendering services...' : 'Almost ready...'}
+      </p>
+    </div>
+  </div>
+));
+
+LoadingScreen.displayName = 'LoadingScreen';
+
 const MapComponent = ({
   services,
   selectedService,
@@ -21,20 +53,49 @@ const MapComponent = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const wasAboveThreshold = useRef<boolean>(false);
+  const markersAdded = useRef<boolean>(false);
+  const handlersSetup = useRef<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  // Memoize services to prevent unnecessary re-renders
+  const servicesRef = useRef(services);
+  servicesRef.current = services;
+  
+  // Memoize onServiceSelect callback
+  const onServiceSelectRef = useRef(onServiceSelect);
+  onServiceSelectRef.current = onServiceSelect;
+
+  // Memoized click handler to prevent recreating on every render
+  const handleMarkerClick = useCallback((e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
+    if (!e.features || e.features.length === 0) return;
+    const feature = e.features[0];
+    const serviceId = feature.properties?.id;
+    const service = servicesRef.current.find(s => s.id === serviceId);
+    if (service) {
+      onServiceSelectRef.current(service);
+    }
+  }, []);
 
   // Initialize map
   useEffect(() => {
     if (!mapContainer.current) return;
 
     try {
+      // Use requestAnimationFrame for smoother progress updates
+      requestAnimationFrame(() => setLoadingProgress(10));
       initializeMapbox();
+      requestAnimationFrame(() => setLoadingProgress(20));
+      
       map.current = createMap(mapContainer.current, KINGSTON_CENTER);
+      requestAnimationFrame(() => setLoadingProgress(30));
 
       map.current.on('style.load', () => {
         if (map.current) {
+          requestAnimationFrame(() => setLoadingProgress(50));
           enable3DBuildings(map.current);
+          requestAnimationFrame(() => setLoadingProgress(60));
         }
       });
 
@@ -44,27 +105,37 @@ const MapComponent = ({
         const zoom = map.current.getZoom();
         const isAboveThreshold = zoom >= BUILDING_HIGHLIGHT_ZOOM_THRESHOLD;
 
-        // Only refresh if we crossed the threshold
         if (isAboveThreshold !== wasAboveThreshold.current) {
           wasAboveThreshold.current = isAboveThreshold;
-          // highlightServiceBuildings(map.current, services);
         }
       });
 
-      map.current.on('load', () => {
-        setIsLoading(false);
-        // Add service markers, labels, and building highlights on initial load
-        if (map.current && services.length > 0) {
+      map.current.on('load', async () => {
+        requestAnimationFrame(() => setLoadingProgress(70));
+        
+        if (map.current && servicesRef.current.length > 0 && !markersAdded.current) {
           try {
-            // Initialize threshold state
             wasAboveThreshold.current = map.current.getZoom() >= BUILDING_HIGHLIGHT_ZOOM_THRESHOLD;
-            addServiceLabels(map.current, services); // Labels always visible
-            addServiceMarkers(map.current, services); // Markers can be hidden
-            // highlightServiceBuildings(map.current, services);
+            requestAnimationFrame(() => setLoadingProgress(80));
+            
+            // Add labels and markers in parallel for faster loading
+            const [, markersResult] = await Promise.all([
+              Promise.resolve(addServiceLabels(map.current, servicesRef.current)),
+              addServiceMarkers(map.current, servicesRef.current)
+            ]);
+            
+            markersAdded.current = true;
+            requestAnimationFrame(() => setLoadingProgress(90));
           } catch (err) {
             console.error('Error adding service markers:', err);
           }
         }
+        
+        requestAnimationFrame(() => {
+          setLoadingProgress(100);
+          // Use requestAnimationFrame for smooth transition
+          requestAnimationFrame(() => setIsLoading(false));
+        });
       });
 
       map.current.on('error', (e) => {
@@ -88,45 +159,39 @@ const MapComponent = ({
     }
   }, []);
 
-  // Update service markers when services change (debounced for performance)
+  // Update service markers when services change (only after initial load)
   useEffect(() => {
-    if (!map.current || isLoading || services.length === 0) return;
+    if (!map.current || isLoading || services.length === 0 || !markersAdded.current) return;
 
-    // Use requestAnimationFrame to batch updates
-    const animationFrameId = requestAnimationFrame(() => {
-      if (!map.current) return;
-      
+    // Only update if map is loaded
+    if (!map.current.loaded()) {
+      const onIdle = () => {
+        if (map.current && services.length > 0) {
+          addServiceLabels(map.current, services);
+          addServiceMarkers(map.current, services);
+        }
+      };
+      map.current.once('idle', onIdle);
+      return () => {
+        map.current?.off('idle', onIdle);
+      };
+    }
+
+    // Map is ready, update markers
+    const updateMarkers = async () => {
       try {
-        // Update labels and markers with new service data
-        addServiceLabels(map.current, services); // Labels always show all
-        addServiceMarkers(map.current, services); // Markers can be filtered
-        // highlightServiceBuildings(map.current, services);
+        addServiceLabels(map.current!, services);
+        await addServiceMarkers(map.current!, services);
       } catch (err) {
         console.error('Error updating service markers:', err);
       }
-    });
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
     };
+    updateMarkers();
   }, [services, isLoading]);
 
-  // Add click handlers for service markers
+  // Add click handlers for service markers - optimized with refs
   useEffect(() => {
-    if (!map.current || isLoading) return;
-
-    const handleClick = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
-      if (!e.features || e.features.length === 0) return;
-
-      const feature = e.features[0];
-      const serviceId = feature.properties?.id;
-
-      // Find the service by ID
-      const service = services.find(s => s.id === serviceId);
-      if (service) {
-        onServiceSelect(service);
-      }
-    };
+    if (!map.current || isLoading || handlersSetup.current) return;
 
     const handleMouseEnter = () => {
       if (map.current) {
@@ -140,26 +205,43 @@ const MapComponent = ({
       }
     };
 
-    // Add click handlers for markers
-    const markerLayers = ['service-markers-icon', 'service-labels'];
-    markerLayers.forEach(layerId => {
-      if (map.current?.getLayer(layerId)) {
-        map.current.on('click', layerId, handleClick);
-        map.current.on('mouseenter', layerId, handleMouseEnter);
-        map.current.on('mouseleave', layerId, handleMouseLeave);
-      }
-    });
+    // Add click handlers for marker layers
+    const markerLayers = ['service-markers-hit', 'service-markers-core', 'service-markers-icon', 'service-labels'];
+    
+    const setupHandlers = () => {
+      if (handlersSetup.current) return;
+      
+      markerLayers.forEach(layerId => {
+        if (map.current?.getLayer(layerId)) {
+          map.current.on('click', layerId, handleMarkerClick);
+          map.current.on('mouseenter', layerId, handleMouseEnter);
+          map.current.on('mouseleave', layerId, handleMouseLeave);
+        }
+      });
+      handlersSetup.current = true;
+    };
+
+    // Setup handlers once map is idle (layers should exist)
+    if (map.current.loaded()) {
+      // Use requestAnimationFrame instead of setTimeout for better performance
+      requestAnimationFrame(setupHandlers);
+    } else {
+      map.current.once('idle', () => {
+        requestAnimationFrame(setupHandlers);
+      });
+    }
 
     return () => {
-      if (map.current) {
-        markerLayers.forEach(layerId => {
-          map.current?.off('click', layerId, handleClick);
-          map.current?.off('mouseenter', layerId, handleMouseEnter);
-          map.current?.off('mouseleave', layerId, handleMouseLeave);
-        });
-      }
+      markerLayers.forEach(layerId => {
+        if (map.current?.getLayer(layerId)) {
+          map.current.off('click', layerId, handleMarkerClick);
+          map.current.off('mouseenter', layerId, handleMouseEnter);
+          map.current.off('mouseleave', layerId, handleMouseLeave);
+        }
+      });
+      handlersSetup.current = false;
     };
-  }, [services, isLoading, onServiceSelect]);
+  }, [isLoading, handleMarkerClick]);
 
   // Fly to selected service
   useEffect(() => {
@@ -171,7 +253,7 @@ const MapComponent = ({
   if (error) {
     return (
       <div
-        className="w-full h-full flex items-center justify-center bg-gray-100"
+        className="w-full h-full flex items-center justify-center bg-black"
         role="alert"
       >
         <div className="text-center p-8">
@@ -188,32 +270,23 @@ const MapComponent = ({
               d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+          <h2 className="text-xl font-semibold text-white mb-2">
             Map Error
           </h2>
-          <p className="text-gray-600">{error}</p>
+          <p className="text-neutral-400">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-full relative">
-      {isLoading && (
-        <div
-          className="absolute inset-0 flex items-center justify-center bg-white z-10"
-          role="status"
-        >
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading map...</p>
-            <span className="sr-only">Loading map</span>
-          </div>
-        </div>
-      )}
+    <div className="w-full h-full relative bg-black">
+      {/* Loading screen with progress */}
+      {isLoading && <LoadingScreen progress={loadingProgress} />}
+      
       <div
         ref={mapContainer}
-        className="w-full h-full"
+        className={`w-full h-full transition-opacity duration-500 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
         role="region"
         aria-label="Interactive map of Kingston services"
       />

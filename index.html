@@ -9,8 +9,27 @@
     <meta name="keywords" content="Kingston, Ontario, accessibility, services, healthcare, groceries, banking" />
     <title>Kalibrate - Accessible Services Navigator</title>
 
-    <!-- Mapbox GL JS CSS -->
+    <!-- Preconnect to critical domains for faster loading -->
+    <link rel="preconnect" href="https://api.mapbox.com" crossorigin />
+    <link rel="preconnect" href="https://tiles.mapbox.com" crossorigin />
+    <link rel="preconnect" href="https://events.mapbox.com" crossorigin />
+    <link rel="dns-prefetch" href="https://api.mapbox.com" />
+    <link rel="dns-prefetch" href="https://tiles.mapbox.com" />
+    
+    <!-- Mapbox GL JS CSS - loaded with high priority -->
     <link href='https://api.mapbox.com/mapbox-gl-js/v3.0.0/mapbox-gl.css' rel='stylesheet' />
+    
+    <!-- Preload the main font if using one -->
+    <style>
+      /* Critical CSS - prevent flash of unstyled content */
+      html, body, #root { 
+        margin: 0; 
+        padding: 0; 
+        height: 100%; 
+        background: #000; 
+        overflow: hidden;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

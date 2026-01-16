@@ -1,11 +1,16 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useMemo, memo } from 'react';
 import { Map } from './components/Map';
 import { Sidebar } from './components/Sidebar';
 import { ChatbotModal } from './components/ChatbotModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { FloatingCategoryBar } from './components/FloatingCategoryBar';
 import { KINGSTON_SERVICES } from './data/services';
 import { useServiceFilter } from './hooks/useServiceFilter';
 import type { ServiceLocation } from './types';
+
+// Memoize ErrorBoundary wrappers to prevent unnecessary rerenders
+const MemoizedMap = memo(Map);
+const MemoizedSidebar = memo(Sidebar);
 
 function App() {
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
@@ -18,6 +23,9 @@ function App() {
 
   const { filterState, filteredServices, toggleCategory } =
     useServiceFilter(KINGSTON_SERVICES);
+
+  // Memoize the sidebar style to prevent object recreation
+  const sidebarStyle = useMemo(() => ({ width: `${sidebarWidth}px` }), [sidebarWidth]);
 
   const handleMouseDown = useCallback(() => {
     setIsResizing(true);
@@ -49,6 +57,11 @@ function App() {
     setSelectedService(undefined);
   }, []);
 
+  // Memoize the service select handler
+  const handleServiceSelect = useCallback((service: ServiceLocation) => {
+    setSelectedService(service);
+  }, []);
+
   return (
     <div 
       ref={containerRef}
@@ -60,24 +73,29 @@ function App() {
       {/* Map - Full screen background */}
       <div className="absolute inset-0">
         <ErrorBoundary fallbackTitle="Map Error">
-          <Map
+          <MemoizedMap
             services={filteredServices}
             selectedService={selectedService}
-            onServiceSelect={setSelectedService}
+            onServiceSelect={handleServiceSelect}
             filterState={filterState}
           />
         </ErrorBoundary>
       </div>
 
+      {/* Floating Category Bar - Quick filters above map */}
+      <FloatingCategoryBar
+        selectedCategories={filterState.selectedCategories}
+        onCategoryToggle={toggleCategory}
+        sidebarWidth={sidebarWidth}
+      />
+
       {/* Sidebar with glass effect - Overlays the map */}
       <div 
         className="absolute top-0 left-0 h-full z-10 flex-shrink-0"
-        style={{ 
-          width: `${sidebarWidth}px`,
-        }}
+        style={sidebarStyle}
       >
         <ErrorBoundary fallbackTitle="Sidebar Error">
-          <Sidebar
+          <MemoizedSidebar
             services={filteredServices}
             selectedCategories={filterState.selectedCategories}
             onCategoryToggle={toggleCategory}
