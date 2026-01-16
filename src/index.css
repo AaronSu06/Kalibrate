@@ -147,6 +147,46 @@ body {
   padding: 2px 4px;
 }
 
+/* Mapbox Navigation Controls - Glass Effect */
+.mapboxgl-ctrl-group {
+  background: rgba(10, 10, 10, 0.6) !important;
+  backdrop-filter: blur(40px) saturate(1.8);
+  -webkit-backdrop-filter: blur(40px) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
+  overflow: hidden;
+}
+
+.mapboxgl-ctrl-group button {
+  background: transparent !important;
+  border: none !important;
+  width: 36px !important;
+  height: 36px !important;
+}
+
+.mapboxgl-ctrl-group button + button {
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.mapboxgl-ctrl-group button:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.mapboxgl-ctrl-group button:focus {
+  outline: none !important;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Style the icons inside nav buttons */
+.mapboxgl-ctrl-group button .mapboxgl-ctrl-icon {
+  filter: invert(1) brightness(0.85);
+}
+
+.mapboxgl-ctrl-group button:hover .mapboxgl-ctrl-icon {
+  filter: invert(1) brightness(1);
+}
+
 /* High contrast mode support */
 @media (prefers-contrast: high) {
   * {
